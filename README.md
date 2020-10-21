@@ -10,6 +10,19 @@ Target is Java 8.
 
 Recommended extensions for VSCode: Java Extension Pack (Microsoft), Language Support for Java (Red Hat), Maven for Java (Microsoft).  
 
+## Gremlin
+
+The P4 knowledge graph is a TinkerPop graph database. Database queries for TinkerPop are graph traversals written in the Gremlin programming language. Basically, Gremlin is a functional programming language, and programs are descriptions of the graph paths to you want to traverse, and the side-effects you want to set off during your traversal (somewhat similar to XQuery).
+
+- Tutorial: https://tinkerpop.apache.org/docs/current/#tutorials
+- Book: http://kelvinlawrence.net/book/PracticalGremlin.html
+- Reference documentation: https://tinkerpop.apache.org/docs/current/reference/#graph-traversal-steps
+- Gremlin white paper: https://arxiv.org/pdf/1508.03843.pdf
+- Javadoc:
+  * http://tinkerpop.apache.org/javadocs/3.4.8/full/org/apache/tinkerpop/gremlin/structure/package-summary.html
+  * http://tinkerpop.apache.org/javadocs/3.4.8/full/org/apache/tinkerpop/gremlin/process/traversal/package-summary.html
+
+
 ## Current code structure 
 
 The code base is modular, and all modules are in the root directory (a requirement by Maven for multi-module projects). In theory each module could be developed and stored in a separate git repository, and then imported as submodule in the main project repository. 
