@@ -82,6 +82,31 @@ Recommended extensions for VSCode: Java Extension Pack (Microsoft), Language Sup
 
 For visualisation, you will need [Graphviz](https://graphviz.org/download/) (tested with 2.38.0).
 
+For running the project using VSCode, you can set arguments for launching `controller.Main` (current file) inside `launch.json`.
+
+For running the project outside VSCode, you have to add arguments inside `exec-maven-plugin` plugin in the `pom.xml` inside the `controller` module, e.g.:
+
+```xml
+<mainClass>controller.Main</mainClass>
+<arguments>
+  <argument>draw</argument>
+  <argument>--help</argument>
+</arguments>
+```
+
+Then, you can run the project with the command:
+
+```sh
+$ mvn exec:java
+```
+
+Or with less Maven noise: 
+
+```sh
+$ mvn exec:java -pl controller
+```
+
+
 ### Gremlin
 
 The P4 knowledge graph resides in a TinkerPop graph database. Database queries for TinkerPop are graph traversals written in the Gremlin programming language. Basically, Gremlin is a functional programming language, and programs are descriptions of the graph paths that you want to traverse, and the side-effects you want to set off during your traversal (somewhat similar to XQuery).
