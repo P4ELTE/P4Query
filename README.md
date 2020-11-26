@@ -140,49 +140,198 @@ The code base is modular, and all modules are in the root directory (a requireme
 - `blackboard`: Knowledge graph (Gremlin Server) and possibly further data access layers. 
 - `broker`: Component for coordinating access to the `blackboard` by various actors. Currently implemented as a DAG in Ant.
 - `experts-...`: Experts (actors, knowledge sources) that know how to derive new information from existing knowledge. When these are invoked by the `broker`, they connect to the `blackboard`, analyse its content, and add new information.
+- `application-...`:  TODO
 - `ontology`: Metadata shared between actors that prescribes/describes what kind of data they should put into the database.
 
-### Current `broker` implementation
-
-In the `broker` module, there is `src/main/resources/broker.xml`. This is a repurposed Ant build file that declares the data dependencies between various information types that one or more experts will deliver.
-
-**Example:** The following `broker.xml` rules declares that any analysis that delivers the `symbol-table` information, will be preceded by the analysis that delivers the `syntax-tree`. In other words, the `symbol-table` expert can be assured that when it invoked, the `syntax-tree` information is already in the knowledge graph and can be used.
-
-```xml
-    <import> <javaresource name="syntax-tree.xml"> <classpath/> </javaresource> </import> 
-    <import> <javaresource name="symbol-table.xml"> <classpath/> </javaresource> </import>
-    
-    <extension-point name="syntax-tree"/>
-    <extension-point name="symbol-table" depends="syntax-tree"/>
-```
-
-Note that `broker.xml` does not prescribe *who* will perform the analysis: it prescribes *what* information types must be inferred. It also prescribes the dependencies between information types, and unknowingly invokes various analysers using whatever `syntax-tree.xml` and `symbol-table.xml` someone put on the classpath.
-
-
-The target that extends `symbol-table` have to reside in a file named `symbol-table.xml` and copied on the classpath. This is as easy as putting the file in the `src/main/resources` folder of the module performing the analysis (because in this case Maven will copy it on the classpath).  
-
-An example for one such target can look like the following, invoking a Java class with the command-line arguments required to connect to the Gremlin Server:
-
-```xml
-    <target name="symbol-table-implem" extensionOf="symbol-table">
-        <java classname="p4analyser.experts.symboltable.SymbolTable">
-            <arg value="${host}"/>
-            <arg value="${port}"/>
-            <arg value="${remoteTraversalSourceName}"/>
-        </java>
-        
-        <echo message="OK"></echo>
-    </target>
-```
-
-### How to create a new `expert` project
+### How to create a new module?
 
 1. Create a new Maven project in the root folder. In VSCode there is a button for this (*Create Maven project*), and it will automatically perform the following steps: 
     a. Update the `modules` element in the root `pom.xml` with the name of the new module.
     b. Include the `parent` element in the `pom.xml` of the new module
-2. Build the new module for the first time. In VSCode, you can do this by restarting VSCode
-3. Choose (or create) a goal in `broker.xml` that you will implement. Create the corresponding `.xml` in `src/main/resources` and extend your chosen goal with a new target. This target should invoke your implementation that will carry out the goal.
-4. Add the new module as a `runtime` dependency for the `broker` module in the `pom.xml` of the `broker`. This will ensure that Maven will copy your `.xml` on the classpath of `broker` when `broker` is executed, and so it can be imported in `broker.xml`.
+2. Build your new module for the first time. In VSCode, you can do this by restarting VSCode
+3. Add your new module as a `runtime` dependency for the `broker` module in the `pom.xml` of the `broker`. This ensures that Java will find your classes when `broker` is executed.
+
+
+
+### How to implement an application?
+
+Note that the main class of the actual Java software is in the `broker`. You implement your application as a module, and the `broker` will discover it semi-automatically using Java SPI. 
+
+1. First, create a new module (see above), and add the `ontology` module as a dependency. 
+2. Create a class that implements your application and defines its command line interface. The dependency injector (DI) in `broker` will provide your class with everything it needs. 
+
+    - Example:
+    
+      ```java    
+      package p4analyser.applications;
+
+      import org.codejargon.feather.Provides;
+      import com.beust.jcommander.Parameter;
+      import com.beust.jcommander.Parameters;
+
+      import javax.inject.Inject;
+      import javax.inject.Provider;
+
+      import p4analyser.ontology.providers.ApplicationProvider;
+      import p4analyser.ontology.providers.P4FileProvider.InputP4File;
+      import p4analyser.ontology.providers.SyntaxTreeProvider.SyntaxTree;
+
+
+      public class MyAppProvider implements ApplicationProvider {
+        @Override
+        public String getUICommandName() { return "myapp"; }
+
+        @Override
+        public String[] getUICommandAliases() { 
+          return new String[]{return "myApp", "ma"}; 
+        }
+
+        @Override
+        @Provides
+        public MyUICommand getUICommand() {
+            return new MyUICommand();
+        }
+
+        @Parameters(commandDescription = "Launch my application")
+        public static class MyUICommand {
+
+          @Parameter(names = { "-s", "--syntax-tree" },
+                     description = "Triggers syntax tree analysis")
+          private Boolean synTree;
+
+        }
+
+        @Provides
+        @Application
+        public Object run(GraphTraversalSource g, 
+                           @InputP4File File file,
+                           @SyntaxTree Provider<Object> ensureSt, 
+                           MyUICommand params){
+            if(params.synTree){
+              ensureSt.get();
+            }
+            g.addV("myLabel").iterate();
+            System.out.println("Done.");
+        }
+
+      }
+      ```
+
+    - `getUICommandName`, `getUICommand`, `getUICommandAliases` defines the command line interface of your application. 
+    - Note that `getUICommand` has a `@Provides` annotation. This tells the DI that `MyAppProvider` is capable of providing `MyUICommand` instances: the `broker` will parameterize these with user input, and then return it to anyone who needs it (e.g. `MyAppProvider` when it needs dependencies to provide an `@Application`)
+    - The `MyUICommand` class defines the command line arguments of your application. It is something you register to the `broker` in the next step, and the `broker` fills it for you with user data. It is a POD whose fields are annotated in order to be automatically parameterized by JCommander. 
+    - Note that `run` also has a `@Provides` annotation. This tells the DI that `MyAppProvider` is capable of providing an `@Application`. This method is not declared by the `ApplicationProvider` interface, because you decide what parameters you want. All parameters are injected by the `broker`. Usually, you depend on the knowledge graph `GraphTraversalSource`, and a certain number of analyses performed on the knowledge graph, but in special cases you may need direct access to the raw P4 file as well.
+      * Special dependency names such as `@InputP4File` and `@SyntaxTree` are defined in the classes of `ontology.providers`. It's good to get to know this package, to see what you can use. By convention, analysers always return `Object`.
+      * It may happen you do not want to initialize all your dependencies in all cases (e.g. you may only want to run syntax tree analysis, if the user requests it). In these cases, you can request a `Provider` instance that will only initialize the dependency if/when you call its `get()` method. 
+  
+    
+3. Make your implementation discoverable to Java SPI by telling it that `MyAppProvider` implements `ApplicationProvider`: 
+
+    - Create the folder `src/main/resources/META-INF/services` in your module.
+    - In this folder create a file `p4analyser.ontology.providers.ApplicationProvider`.
+    - In the file write `p4analyser.applications.MyAppProvider`.
+
+4. Run the `broker` with the arguments you specified in your interface (e.g. in `MyUICommand`).
+
+    ```sh
+    $ NAME myapp --syntax-tree
+    Done.
+    ```
+
+
+### How to implement an analyser?
+
+#### Declaring the analyser
+
+1. First, if it was not declared before, you need to declare your analyser in `ontology.providers`. This helps the `broker` discover your analyser module and also tells others that they can depend on your analysis in their own analysers.
+
+      - Example:
+
+        ```java
+        package p4analyser.ontology.providers;
+     
+        import java.io.File;
+        import java.io.IOException;
+        import java.lang.annotation.Inherited;
+        import java.lang.annotation.Retention;
+        import java.lang.annotation.RetentionPolicy;
+     
+        import javax.inject.Qualifier;
+     
+        public interface MySpecialAnalysisProvider  {
+            @Qualifier
+            @Retention(RetentionPolicy.RUNTIME)
+            public @interface MySpecialAnalysis { }
+        }
+        ```
+
+      - This interface will be implemented by your implementation in your own modul. `broker` will discover your modul by looking up who implements this interface.
+      - The annotion is used for dependency injection. Specifically, you will use this to tell others that your analyser is capable of providing an object named `@MySpecialAnalysis`. This object is simply a token signifying that your analysis has been completed. Others will claim dependency on this token, but they actually expect you to modify the knowledge graph according to the requirements of this analysis.
+
+2. Then, you need to modify a line in `broker` by adding this interface to the list of analysers whose implementations `broker` will try to discover.
+
+    ```java
+    private static final Class<?>[] providerIfaces = { MySpecialAnalysisProvider.class, ... };
+    ```
+
+3. Finally, you create the tests to completely define the requirements that your analysis satisfies. It may also be a good idea to extend the `experts-visualizer` application for your `@MySpecialAnalysis` analysis, so that you can see the results as you work.
+
+
+#### Defining the analyser
+
+Note that the main class of the actual Java software is in the `broker`. You implement your analyser as a module, and the `broker` will discover it semi-automatically using Java SPI. 
+
+1. First, create a new module (see above), and add the `ontology` module as a dependency. 
+2. Create a class that implements the selected analyser. The dependency injector (DI) in `broker` will provide your class with everything it needs. 
+
+    - Example:
+    
+      ```java    
+      package p4analyser.experts;
+
+      import org.codejargon.feather.Provides;
+
+      import p4analyser.ontology.providers.P4FileProvider.InputP4File;
+      import p4analyser.ontology.providers.P4FileProvider.CoreP4File;
+      import p4analyser.ontology.providers.P4FileProvider.V1ModelP4File;
+      import p4analyser.ontology.providers.SyntaxTreeProvider.SyntaxTree;
+
+      public class MySpecialAnalysisImpl implements MySpecialAnalysisProvider {
+        @Provides
+        @MySpecialAnalysis
+        public Object analyse(GraphTraversalSource g, 
+                              @SyntaxTree Provider<Object> ensureSt, 
+                              @InputP4File File inputP4){
+          if(g.V().count().next() == 0)
+            ensureSt.get();
+          System.out.println("Done.");
+        }
+      }
+      ```
+
+    - Note that the method `analyse` has a `@Provides` annotation. This tells the DI that `MySpecialAnalysisImpl` is capable of providing the `@MySpecialAnalysis` analysis on the knowledge graph. This method is not declared by the `MySpecialAnalysisProvider` interface, because you decide what parameters you want. All parameters are injected by the `broker`. Usually, you depend on the knowledge graph `GraphTraversalSource`, and a certain number of analyses performed on the knowledge graph, but in special cases you may need direct access to the raw P4 file as well.
+      * Special dependency names such as `@InputP4File` and `@SyntaxTree` are defined in the classes of `ontology.providers`. It's good to get to know this package, to see what you can use. By convention, analysers should always return `Object`.
+      * It may happen you do not want to initialize all your dependencies in all cases (e.g. you may only want to run syntax tree analysis, if the user requests it). In these cases, you can request a `Provider` instance that will only initialize the dependency if/when you call its `get()` method. 
+  
+    
+3. Make your implementation discoverable to Java SPI by telling it that `MySpecialAnalysisImpl` implements `MySpecialAnalysisProvider`: 
+
+    - Create the folder `src/main/resources/META-INF/services` in your module.
+    - In this folder create a file `p4analyser.ontology.providers.MySpecialAnalysisProvider`.
+    - In the file write `p4analyser.experts.MySpecialAnalysisImpl`.
+
+4. Try it by running an application that depends on your `@MySpecialAnalysis` analysis. It may be a good idea to extend the `experts-visualizer` application, so that you can see the results.
+
+### Experience report: Dependency injection vs. Ant DAG 
+
+- Ant is defined in XML, and this got in the way of testing. Either `broker.xml` had to be duplicated for testing, or parts of the file had to be rewritten to select the right goals.
+- It was difficult to customize fault tolerance with Ant (i.e. what can be done when an analyser fails, e.g. during testing).
+- Ant had no built-in way to enforce implementation (extension) of an interface (target). If there was no extension, the target quietly succeeded, even though nothing happened.
+- Ant made debugging more difficult with its deep stack traces.
+- With Ant the architecture was `broker -> Ant -> modules`. This limits modules, as their only input is what can be passed through Ant (i.e. command line arguments).
+- Ant is slow. It probably starts up a new JVM everytime a class is invoked by a target.
+- Since Ant starts up new processes, it also limits what modules can output. Specifically, there were problems with JLine3 terminal not knowing where to output and crash, when it was run inside a module invoked by Ant.
+
 
 ## Credits
 
