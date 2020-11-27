@@ -158,19 +158,20 @@ The code base is modular, and all modules are in the root directory (a requireme
 Note that the main class of the actual Java software is in the `broker`. You implement your application as a module, and the `broker` will discover it automatically. 
 
 1. First, create a new module (see above), and add the `ontology` module as a dependency. 
-2. Create a class in `p4analyser.applications` that will implement your application logic and defines its command line interface. Make sure you get the package right, since this is how `broker` will find your application. The dependency injector (DI) in `broker` will provide your class with everything it needs. Your implementation class needs to implement the `ApplicationProvider` interface, because `broker` will use this to ask for your user interface description.
+2. Create a class in `p4analyser.applications` that will implement your application logic, defines its command line interface, and is capable of providing an instance of this class when requested by the dependency injector (DI) in `broker`. Make sure you get the package right, since this is how `broker` will find your application. The DI will provide your class with everything it needs. Your implementation class needs to implement the `ApplicationProvider` interface, because `broker` will use this to ask for your user interface description.
 
     - Example:
     
       ```java    
       package p4analyser.applications;
 
-      import org.codejargon.feather.Provides;
       import com.beust.jcommander.Parameter;
       import com.beust.jcommander.Parameters;
 
+      import org.codejargon.feather.Provides;
       import javax.inject.Inject;
       import javax.inject.Provider;
+      import javax.inject.Singleton;
 
       import p4analyser.ontology.providers.ApplicationProvider;
       import p4analyser.ontology.providers.ApplicationProvider.Application;
@@ -188,9 +189,8 @@ Note that the main class of the actual Java software is in the `broker`. You imp
         }
 
         @Override
-        @Provides
-        public MyUICommand getUICommand() {
-            return new MyUICommand();
+        public Class<? extends MyUICommand> getUICommand() {
+            return MyUICommand.class;
         }
 
         @Parameters(commandDescription = "Launch my application")
@@ -200,13 +200,20 @@ Note that the main class of the actual Java software is in the `broker`. You imp
                      description = "Triggers syntax tree analysis")
           private Boolean synTree;
 
+          @Provides
+          @Singleton
+          public MyUICommand get(){
+            return this;
+          }
+
         }
 
         @Provides
+        @Singleton
         @Application
-        public Void run(GraphTraversalSource g, 
+        public Status run(GraphTraversalSource g, 
                         @InputP4File File file,
-                        @SyntaxTree Provider<Void> ensureSt, 
+                        @SyntaxTree Provider<Status> ensureSt, 
                         MyUICommand params){
             if(params.synTree)
               ensureSt.get();
@@ -214,18 +221,19 @@ Note that the main class of the actual Java software is in the `broker`. You imp
             System.out.println(g.V().count().next());
             System.out.println("Done.");
 
-            return null;
+            return new Status();
         }
 
       }
       ```
 
     - `getUICommandName`, `getUICommand`, `getUICommandAliases` defines the command line interface of your application. 
-    - Note that `getUICommand` has a `@Provides` annotation. This tells the DI that `MyApp` is capable of providing `MyUICommand` instances: the `broker` will parameterize these with user input, and then return it to anyone who needs it (e.g. `MyApp` when it needs its dependencies fulfilled to provide an `Application`)
+    - Note that `getUICommand` has a `@Provides` annotation. This tells the DI that `MyApp` is capable of providing a `Class<?>` that will be instantiated by the `broker` who will then parameterize these with user input, and then return it to anyone who needs it (e.g. `MyApp` when it needs its dependencies fulfilled to provide an `Application`)
     - The `MyUICommand` class defines the command line arguments of your application. It is something you register to the `broker` in the next step, and the `broker` fills it for you with user data. It is a POD whose fields are annotated in order to be automatically parameterized by JCommander. 
-    - Note that `run` also has a `@Provides` annotation. This tells the DI that `MyApp` is capable of providing an `@Application`. This method is not declared by the `ApplicationProvider` interface, because you decide what parameters you want. All parameters are injected by the `broker`. Usually, you depend on the knowledge graph `GraphTraversalSource`, and a certain number of analyses performed on the knowledge graph, but in special cases you may need direct access to the raw P4 file as well.
-      * By convention, applications and analysers should always return `Void` type.
-      * Special dependency names such as `@InputP4File` are defined in the classes of `ontology.providers`. It's good to get to know this package, to see what you can use. 
+     * Note that `MyUICommand` declares a `@Provides` method with `MyUICommand` return type: this tells the DI injector in `broker` that this method can be used to provide a `MyUICommand` instance to someone..
+    - Note that `run` has a `@Provides` annotation. This tells the DI that `MyApp` is capable of providing an `@Application`. This method is not declared by the `ApplicationProvider` interface, because you decide what parameters you want. All parameters are injected by the `broker`. Usually, you depend on the knowledge graph `GraphTraversalSource`, and a certain number of analyses performed on the knowledge graph, but in special cases you may need direct access to the raw P4 file as well.
+      * By convention, applications and analysers should always return `Status` type.
+      * Special dependency names such as `@InputP4File` are defined in the classes of `ontology`. It's good to get to know this package and subpackages, to see what you can use. 
       * It may happen you do not want to initialize all your dependencies in all cases (e.g. you may only want to run syntax tree analysis, if the user requests it). In these cases, you can request a `Provider` instance that will only initialize the dependency if/when you call its `get()` method. 
   
 3. Run the `broker` with the arguments you specified in your interface (e.g. in `MyUICommand`).
@@ -278,6 +286,7 @@ Note that the main class of the actual Java software is in the `broker`. You imp
       package p4analyser.experts;
 
       import org.codejargon.feather.Provides;
+      import javax.inject.Singleton;
 
       import p4analyser.ontology.providers.P4FileProvider.InputP4File;
       import p4analyser.ontology.analyses.SyntaxTree;
@@ -285,20 +294,21 @@ Note that the main class of the actual Java software is in the `broker`. You imp
 
       public class MySpecialAnalysisImpl {
         @Provides
+        @Singleton
         @MySpecialAnalysis
-        public Void analyse(GraphTraversalSource g, 
-                            @SyntaxTree Provider<Void> ensureSt, 
+        public Status analyse(GraphTraversalSource g, 
+                            @SyntaxTree Provider<Status> ensureSt, 
                             @InputP4File File inputP4){
           if(g.V().count().next() == 0)
             ensureSt.get();
           System.out.println("Done.");
-          return null;
+          return new Status();
         }
       }
       ```
 
     - Note that the method `analyse` has a `@Provides` annotation. This tells the DI that `MySpecialAnalysisImpl` is capable of providing the `@MySpecialAnalysis` analysis on the knowledge graph. All parameters are injected by the `broker`. Usually, you depend on the knowledge graph `GraphTraversalSource`, and a certain number of analyses performed on the knowledge graph, but in special cases you may need direct access to the raw P4 file as well.
-      * By convention, applications and analysers should always return `Void` type.
+      * By convention, applications and analysers should always return `Status` type.
       * Special dependency names such as `@InputP4File` are defined in `ontology`. It's good to get to know this package and subpackages, to see what you can use. 
       * It may happen you do not want to initialize all your dependencies in all cases (e.g. you may only want to run syntax tree analysis, if the user requests it). In these cases, you can request a `Provider` instance that will only initialize the dependency if/when you call its `get()` method. 
 
@@ -310,8 +320,8 @@ Note that the main class of the actual Java software is in the `broker`. You imp
 - It was difficult to customize fault tolerance with Ant (i.e. what can be done when an analyser fails, e.g. during testing).
 - Ant had no built-in way to enforce implementation (extension) of an interface (target). If there was no extension, the target quietly succeeded, even though nothing happened.
 - Ant made debugging more difficult with its deep stack traces.
+- Ant dependency names were strings, and these had to be edited by hand. With DI, dependency names are Java classes. Typos will be catched by the compiler. IDE toolset can be used for renaming.
 - With Ant the architecture was `broker -> Ant -> modules`. This limits modules, as their only input is what can be passed through Ant (i.e. command line arguments).
-- Ant is slow. It probably starts up a new JVM everytime a class is invoked by a target.
 - Since Ant starts up new processes, it also limits what modules can output. Specifically, there were problems with JLine3 terminal not knowing where to output and crash, when it was run inside a module invoked by Ant.
 
 
