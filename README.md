@@ -48,7 +48,7 @@ NAME has a layered architecture. End-users only interact with applications. Appl
 All built-in applications of NAME can be launched from the command line interface (CLI). For example, assuming you store a P4 program at path `$EXAMPLES/basic.p4`{.sh}, and want launch the graph query REPL, just navigate into the directory where you store `NAME-x-y-z.jar`{.sh} and fire up NAME like this in your terminal:
 
 ```sh
-$ NAME repl $EXAMPLES/basic.p4
+$ NAME -i $EXAMPLES/basic.p4 repl 
 ```
 
 By passing `repl` as the first argument, you tell NAME to launch the application named `repl`. The second argument -- a file name -- will be passed to the REPL application. In turn, the REPL will load the file into the knowledge graph (unless it is loaded already), and start accepting your user inputs (valid queries in Gremlin-Java). For more information on using REPL, see [REPL](TODO).
@@ -57,16 +57,16 @@ By passing `repl` as the first argument, you tell NAME to launch the application
 Another example is graph visualization, which was implemented as another application:
 
 ```sh
-$ NAME draw $EXAMPLES/basic.p4 syntax-tree control-flow
+$ NAME -i $EXAMPLES/basic.p4 draw SymbolTable ControlFlow
 ```
 
-Again the first argument tells NAME to launch the visualizer application with the following arguments. Specifically, the visualizer will load the file into knowledge graph (unless it is loaded already), and then show you a subgraph that contains only the syntax tree and control flow edges. For more information on graph visualization, see [Visualizer](TODO).
+Again the first argument tells NAME to launch the visualizer application with the following arguments. Specifically, the visualizer will load the file into knowledge graph (unless it is loaded already), and then show you a subgraph that contains only the symbol table and control flow edges. For more information on graph visualization, see [Visualizer](TODO).
 
 
 Finally, to formally verify that `$EXAMPLES/basic.p4`{.sh} is bug-free (at least with respect some bugs), simply run:
 
 ```sh
-$ NAME verify $EXAMPLES/basic.p4
+$ NAME -i $EXAMPLES/basic.p4 verify 
 ```
 
 For more information on P4 formal verification, see [Verification](TODO).
