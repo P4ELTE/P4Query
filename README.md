@@ -175,7 +175,7 @@ Note that the main class of the actual Java software is in the `broker`. You imp
       import p4analyser.ontology.providers.ApplicationProvider;
       import p4analyser.ontology.providers.ApplicationProvider.Application;
       import p4analyser.ontology.providers.P4FileProvider.InputP4File;
-      import p4analyser.ontology.providers.SyntaxTree;
+      import p4analyser.ontology.analyses.SyntaxTree;
 
 
       public class MyApp implements ApplicationProvider {
@@ -280,7 +280,8 @@ Note that the main class of the actual Java software is in the `broker`. You imp
       import org.codejargon.feather.Provides;
 
       import p4analyser.ontology.providers.P4FileProvider.InputP4File;
-      import p4analyser.ontology.providers.SyntaxTreeAnalysis;
+      import p4analyser.ontology.analyses.SyntaxTree;
+      import p4analyser.ontology.analyses.MySpecialAnalysis;
 
       public class MySpecialAnalysisImpl {
         @Provides
