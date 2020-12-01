@@ -5,12 +5,11 @@ Copyright &copy; 2020 ELTE IK
 
 ## Description
 
-NAME is a static code analysis framework for the P4 language. We intend NAME to be a knowledge base or infrastructure that can host various applications, such as compilers, code comprehension tools, IDEs, and formal verification tools.
+`p4analyser` is a static code analysis framework for the P4 language. We intend `p4analyser` to be a knowledge base or infrastructure that can host various applications, such as compilers, code comprehension tools, IDEs, and formal verification tools.
 
 Implemented features (applications):
 
 - Visualization 
-- Graph query REPL
 - Verification of various safety-properties 
 
 Implemented features (infrastructure):
@@ -33,40 +32,40 @@ Implemented features (infrastructure):
 
 ## Usage
 
-NAME has two kinds of users: 
+`p4analyser` has two kinds of users: 
 
 - **End-users** only use existing applications. 
 - **Application developers** mainly use the infrastructure to create new applications, but occasionaly they also act as end-users and use existing applications that help in development (e.g. they visualise the P4 knowledge graph, or experiment with graph queries). 
 
 In this section, we address end-users. Application developers working with the infrastructure should explore the [Contributors](TODO) section. 
 
-NAME has a layered architecture. End-users only interact with applications. Applications in turn interact with knowledge graph in the infrastructure layer.
+`p4analyser` has a layered architecture. End-users only interact with applications. Applications in turn interact with knowledge graph in the infrastructure layer.
 
 ![Figure: Layers](guides/figures/layers.png){ width=40% }
 
 
-All built-in applications of NAME can be launched from the command line interface (CLI). For example, assuming you store a P4 program at path `$EXAMPLES/basic.p4`{.sh}, and want launch the graph query REPL, just navigate into the directory where you store `NAME-x-y-z.jar`{.sh} and fire up NAME like this in your terminal:
+All built-in applications of `p4analyser` can be launched from the command line interface (CLI). For example, assuming you store a P4 program at path `$EXAMPLES/basic.p4`{.sh}, and want launch the graph query REPL, just navigate into the directory where you store `p4analyser-x-y-z.jar`{.sh} and fire up `p4analyser` like this in your terminal:
 
 ```sh
-$ NAME -i $EXAMPLES/basic.p4 repl 
+$ p4analyser repl $EXAMPLES/basic.p4
 ```
 
-By passing `repl` as the first argument, you tell NAME to launch the application named `repl`. The second argument -- a file name -- will be passed to the REPL application. In turn, the REPL will load the file into the knowledge graph (unless it is loaded already), and start accepting your user inputs (valid queries in Gremlin-Java). For more information on using REPL, see [REPL](TODO).
+By passing `repl` as the first argument, you tell `p4analyser` to launch the application named `repl`. The second argument -- a file name -- will be passed to the REPL application. In turn, the REPL will load the file into the knowledge graph (unless it is loaded already), and start accepting your user inputs (valid queries in Gremlin-Java). For more information on using REPL, see [REPL](TODO).
 
 
 Another example is graph visualization, which was implemented as another application:
 
 ```sh
-$ NAME -i $EXAMPLES/basic.p4 draw SymbolTable ControlFlow
+$ p4analyser draw $EXAMPLES/basic.p4 -A SymbolTable ControlFlow
 ```
 
-Again the first argument tells NAME to launch the visualizer application with the following arguments. Specifically, the visualizer will load the file into knowledge graph (unless it is loaded already), and then show you a subgraph that contains only the symbol table and control flow edges. For more information on graph visualization, see [Visualizer](TODO).
+Again the first argument tells `p4analyser` to launch the visualizer application with the following arguments. Specifically, the visualizer will load the file into knowledge graph (unless it is loaded already), and then show you a subgraph that contains only the symbol table and control flow edges. For more information on graph visualization, see [Visualizer](TODO).
 
 
 Finally, to formally verify that `$EXAMPLES/basic.p4`{.sh} is bug-free (at least with respect some bugs), simply run:
 
 ```sh
-$ NAME -i $EXAMPLES/basic.p4 verify 
+$ p4analyser verify $EXAMPLES/basic.p4 
 ```
 
 For more information on P4 formal verification, see [Verification](TODO).
@@ -155,10 +154,45 @@ The code base is modular, and all modules are in the root directory (a requireme
 
 ### How to implement an application?
 
-Note that the main class of the actual Java software is in the `broker`. You implement your application as a module, and the `broker` will discover it automatically. 
+Applications will be accessed by users. Accordingly, all applications must define a command line user interface. This is done in a class that implements `AppUI`. An instance of this class will be passed to the `broker`, who will use the `JCommander` library to fill in the missing fields annotated with `@Parameter`, based on the user arguments. `AppUI` objects must declare a unique name for the application: the user will invoke the application using this name, the `broker` will also use this name to find which application must be initialized.
+
+   - Example:
+   
+     ```java    
+     package p4analyser.applications;
+
+     import com.beust.jcommander.Parameter;
+     import com.beust.jcommander.Parameters;
+
+     import p4analyser.ontology.providers.AppUI;
+
+     @Parameters(commandDescription = "Launch my application")
+     public class MyAppUI extends AppUI {
+
+         @Override
+         public String getCommandName() { return "myapp"; }
+
+         @Override
+         public String[] getCommandNameAliases() {
+             return new String[]{"myApp", "MyApp", "my", "ma"};
+         }
+
+         @Parameter(names = { "-s", "--syntax-tree" },
+                    description = "Triggers syntax tree analysis")
+         private Boolean synTree;
+
+     }
+     ```
+
+   - The `AppUI` abstract class requires the `MyAppUI` class to implement the `getCommandName()` method, so that it returns the unique name of the application. 
+   - In addition, `MyAppUI` annotates its custom `synTree` argument with `@Parameter`: if the user states the `-s` option on the command line, the `broker` will set `synTree` to `true`, otherwise it will be left on `false`.
+   - Note that there are a number few user argument fields that `AppUI` declares which are universal for all applications. For example the path to the input P4 file is requested inside `AppUI`, and it is mainly used by `broker` to load that P4 file, but you may access it as well. 
+
+
+No, that the interface is ready, we can implement the application logic. Note that the main class of the actual Java software is in the `broker`. You implement your application as a module, and the `broker` will discover it automatically. 
 
 1. First, create a new module (see above), and add the `ontology` module as a dependency. 
-2. Create a class in `p4analyser.applications` that will implement your application logic, defines its command line interface, and is capable of providing an instance of this class when requested by the dependency injector (DI) in `broker`. Make sure you get the package right, since this is how `broker` will find your application. The DI will provide your class with everything it needs. Your implementation class needs to implement the `ApplicationProvider` interface, because `broker` will use this to ask for your user interface description.
+2. Create a class in `p4analyser.applications` that will implement your application logic and is capable of providing an instance of this class when requested by the dependency injector (DI) in `broker`. Make sure you get the package right, since this is how `broker` will find your application. The DI will provide your class with everything it needs. Your implementation class needs to implement the `Application` interface, because `broker` will use this to ask for your user interface description.
 
     - Example:
     
@@ -173,52 +207,43 @@ Note that the main class of the actual Java software is in the `broker`. You imp
       import javax.inject.Provider;
       import javax.inject.Singleton;
 
-      import p4analyser.ontology.providers.ApplicationProvider;
-      import p4analyser.ontology.providers.ApplicationProvider.Application;
+      import p4analyser.ontology.providers.Application;
+      import p4analyser.ontology.providers.AppUI;
       import p4analyser.ontology.providers.P4FileProvider.InputP4File;
       import p4analyser.ontology.analyses.SyntaxTree;
+      import p4analyser.ontology.Status;
 
+      public class MyApp implements Application {
 
-      public class MyApp implements ApplicationProvider {
-        @Override
-        public String getUICommandName() { return "myapp"; }
+        // User interface
 
-        @Override
-        public String[] getUICommandAliases() { 
-          return new String[]{return "myApp", "ma"}; 
-        }
+        private final MyAppUI ui = new MyAppUI();
 
         @Override
-        public Class<? extends MyUICommand> getUICommand() {
-            return MyUICommand.class;
+        public AppUI getUI(){
+            return ui;
         }
 
-        @Parameters(commandDescription = "Launch my application")
-        public static class MyUICommand {
+        // Business logic
 
-          @Parameter(names = { "-s", "--syntax-tree" },
-                     description = "Triggers syntax tree analysis")
-          private Boolean synTree;
+        @Inject
+        private GraphTraversalSource g; 
 
-          @Provides
-          @Singleton
-          public MyUICommand get(){
-            return this;
-          }
+        @Inject
+        @InputP4File 
+        private File file;
 
-        }
+        @Inject
+        @SyntaxTree 
+        private Provider<Status> ensureSt;
 
-        @Provides
-        @Singleton
-        @Application
-        public Status run(GraphTraversalSource g, 
-                        @InputP4File File file,
-                        @SyntaxTree Provider<Status> ensureSt, 
-                        MyUICommand params){
-            if(params.synTree)
+        @Override
+        public Status run(){
+            if(ui.synTree)
               ensureSt.get();
             
             System.out.println(g.V().count().next());
+
             System.out.println("Done.");
 
             return new Status();
@@ -227,19 +252,16 @@ Note that the main class of the actual Java software is in the `broker`. You imp
       }
       ```
 
-    - `getUICommandName`, `getUICommand`, `getUICommandAliases` defines the command line interface of your application. 
-    - Note that `getUICommand` has a `@Provides` annotation. This tells the DI that `MyApp` is capable of providing a `Class<?>` that will be instantiated by the `broker` who will then parameterize these with user input, and then return it to anyone who needs it (e.g. `MyApp` when it needs its dependencies fulfilled to provide an `Application`)
-    - The `MyUICommand` class defines the command line arguments of your application. It is something you register to the `broker` in the next step, and the `broker` fills it for you with user data. It is a POD whose fields are annotated in order to be automatically parameterized by JCommander. 
-     * Note that `MyUICommand` declares a `@Provides` method with `MyUICommand` return type: this tells the DI injector in `broker` that this method can be used to provide a `MyUICommand` instance to someone..
-    - Note that `run` has a `@Provides` annotation. This tells the DI that `MyApp` is capable of providing an `@Application`. This method is not declared by the `ApplicationProvider` interface, because you decide what parameters you want. All parameters are injected by the `broker`. Usually, you depend on the knowledge graph `GraphTraversalSource`, and a certain number of analyses performed on the knowledge graph, but in special cases you may need direct access to the raw P4 file as well.
-      * By convention, applications and analysers should always return `Status` type.
+    - The `Application` interface requires this class to implement `getUI()`, so that it returns a reference to the command line interface of your application. The `broker` will use JCommander to fill in the `@Parameter` annotated arguments of this object by the time your application is started. 
+    - The `Application` interface also requires this class to implement the the application logic inside `run()`. You have to state all your dependencies with `@Inject` annotated fields. All these dependencies will be satisfied by the `broker`. Usually, you depend on the knowledge graph `GraphTraversalSource`, and a certain number of analyses performed on the knowledge graph, but in special cases you may need direct access to the raw P4 file as well.
       * Special dependency names such as `@InputP4File` are defined in the classes of `ontology`. It's good to get to know this package and subpackages, to see what you can use. 
+      * By now, the `broker` also filled the `@Parameter` fields of the object you return in `getUI()` with the user arguments, so you use this as well.
       * It may happen you do not want to initialize all your dependencies in all cases (e.g. you may only want to run syntax tree analysis, if the user requests it). In these cases, you can request a `Provider` instance that will only initialize the dependency if/when you call its `get()` method. 
   
 3. Run the `broker` with the arguments you specified in your interface (e.g. in `MyUICommand`).
 
     ```sh
-    $ NAME myapp --syntax-tree
+    $ p4analyser myapp --syntax-tree
     Done.
     ```
 
@@ -262,11 +284,11 @@ Note that the main class of the actual Java software is in the `broker`. You imp
 
         @Qualifier
         @Retention(RetentionPolicy.RUNTIME)
-        public interface MySpecialAnalysis  {
+        public @interface MySpecialAnalysis  {
         }
         ```
 
-      - You will use this annotation in dependency injection. Specifically, you will use this to communicate to others that your analyser is capable of providing a `@MySpecialAnalysis` token. This token (usually a `null` value) signifyies that your analysis has been completed. Others will claim dependency on this token, but they actually expect you to modify the knowledge graph according to the requirements of this analysis.
+      - You will use this annotation in dependency injection. Specifically, you will use this to communicate to others that your analyser is capable of providing a `@MySpecialAnalysis` token. This token signifyies that your analysis has been completed. Others will claim dependency on this token, but they actually expect you to modify the knowledge graph according to the requirements of this analysis.
       - Additionally, `broker` will use this annotation to discover your modul by looking up which class has a method annotated with this annotation.
 
 
@@ -291,6 +313,7 @@ Note that the main class of the actual Java software is in the `broker`. You imp
       import p4analyser.ontology.providers.P4FileProvider.InputP4File;
       import p4analyser.ontology.analyses.SyntaxTree;
       import p4analyser.ontology.analyses.MySpecialAnalysis;
+      import p4analyser.ontology.Status;
 
       public class MySpecialAnalysisImpl {
         @Provides
@@ -301,6 +324,9 @@ Note that the main class of the actual Java software is in the `broker`. You imp
                             @InputP4File File inputP4){
           if(g.V().count().next() == 0)
             ensureSt.get();
+
+          System.out.println(g.V().count().next());
+
           System.out.println("Done.");
           return new Status();
         }
