@@ -71,11 +71,18 @@ $ p4analyser verify $EXAMPLES/basic.p4
 For more information on P4 formal verification, see [Verification](TODO).
 
 
+### Persistent database
+
+Syntactic and semantic analysis can take a long time, so it is faster if they do not have to be performed every time an application is started. 
+
+To persist the database, use the `--storage <location>` option with the location where the database (or databases if you invoke the tool on multiple files) will be stored. If you run the same application twice on the same location, the second execution will take much less time since the database is already complete. Moreover, if you run a different application, only those analyses will be performed whose results are not yet in the database.
+
+
 ## Contributing
 
 It should be possible to import the repository root as a folder in VSCode or [VSCodium](https://vscodium.com/).
 
-Target is Java 8. 
+Target is Java 8. (See section below on how to setup VSCode for Java 8.)
 
 Recommended extensions for VSCode: Java Extension Pack (Microsoft), Language Support for Java (Red Hat), Maven for Java (Microsoft).  
 
@@ -105,6 +112,21 @@ Or with less Maven noise:
 $ mvn exec:java -pl controller
 ```
 
+### VSCode an Java 8
+
+The VSCode Java plugin requires Java 11 or newer, but projects can still be built using Java 8. 
+
+Press `Ctrl+,` and in the "User" tab, search for `java.configuration.runtimes`. Click "Edit in settings.json", and add the following (correct the `path` field to your local setup): 
+
+```
+"java.configuration.runtimes": [{
+  "name": "JavaSE-1.8",
+  "path": "/usr/lib/jvm/java-8-openjdk-amd64",
+  "default": true
+}],
+```
+
+After that issue an `mvn clean` and clean the workspace.
 
 ### Gremlin
 
@@ -141,6 +163,12 @@ The code base is modular, and all modules are in the root directory (a requireme
 - `experts-...`: Experts (actors, knowledge sources) that know how to derive new information from existing knowledge. When these are invoked by the `broker`, they connect to the `blackboard`, analyse its content, and add new information.
 - `application-...`:  TODO
 - `ontology`: Metadata shared between actors that prescribes/describes what kind of data they should put into the database.
+
+### Tips
+
+Use the visualizer module to explore the graph. If you introduce a new analysis, modify the visualization module to visualize the results of your analysis as well.
+
+Take advantage of database persistance to speed up development (`-s` option). You will need the `--readonly` option as well so your own modifications will not be persisted, and you will be able to always experiment with the same database.
 
 ### How to create a new module?
 
@@ -339,6 +367,8 @@ Note that the main class of the actual Java software is in the `broker`. You imp
       * It may happen you do not want to initialize all your dependencies in all cases (e.g. you may only want to run syntax tree analysis, if the user requests it). In these cases, you can request a `Provider` instance that will only initialize the dependency if/when you call its `get()` method. 
 
 3. Try it by running an application that depends on your `@MySpecialAnalysis` analysis. It may be a good idea to extend the `experts-visualizer` application, so that you can see the results.
+
+
 
 ### Experience report: Dependency injection vs. Ant DAG 
 
