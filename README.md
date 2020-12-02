@@ -75,7 +75,7 @@ For more information on P4 formal verification, see [Verification](TODO).
 
 Syntactic and semantic analysis can take a long time, so it is faster if they do not have to be performed every time an application is started. 
 
-To persist the database, use the `--storage <location>` option with the location where the database (or databases if you invoke the tool on multiple files) will be stored. If you run the same application twice on the same location, the second execution will take much less time since the database is already complete. Moreover, if you run a different application, only those analyses will be performed whose results are not yet in the database.
+To persist the database, use the `--store <location>` option with the location where the database (or databases if you invoke the tool on multiple files) will be stored. If you run the same application twice on the same location, the second execution will take much less time since the database is already complete. Moreover, if you run a different application, only those analyses will be performed whose results are not yet in the database.
 
 
 ## Contributing
