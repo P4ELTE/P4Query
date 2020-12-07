@@ -1,7 +1,7 @@
+Copyright 2020, Eötvös Loránd University.
+All rights reserved.
+
 # P4 code analysis
-
-Copyright &copy; 2020 ELTE IK
-
 
 ## Description
 
