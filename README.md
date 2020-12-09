@@ -349,6 +349,7 @@ Note that the main class of the actual Java software is in the `broker`. You imp
         @MySpecialAnalysis
         public Status analyse(GraphTraversalSource g, 
                             @SyntaxTree Provider<Status> ensureSt, 
+                            @CLIArgs AppUI args, 
                             @InputP4File File inputP4){
           if(g.V().count().next() == 0)
             ensureSt.get();
@@ -363,7 +364,7 @@ Note that the main class of the actual Java software is in the `broker`. You imp
 
     - Note that the method `analyse` has a `@Provides` annotation. This tells the DI that `MySpecialAnalysisImpl` is capable of providing the `@MySpecialAnalysis` analysis on the knowledge graph. All parameters are injected by the `broker`. Usually, you depend on the knowledge graph `GraphTraversalSource`, and a certain number of analyses performed on the knowledge graph, but in special cases you may need direct access to the raw P4 file as well.
       * By convention, applications and analysers should always return `Status` type.
-      * Special dependency names such as `@InputP4File` are defined in `ontology`. It's good to get to know this package and subpackages, to see what you can use. 
+      * Special dependency names such as `@InputP4File` or `@CLIArgs` are defined in `ontology`. It's good to get to know this package and subpackages, to see what you can use. In this case, `@InputP4File` is a reference to the raw P4 file being processed (usually not needed), and `@CLIArgs` is an object storing the user provided command line arguments (usually not needed).
       * It may happen you do not want to initialize all your dependencies in all cases (e.g. you may only want to run syntax tree analysis, if the user requests it). In these cases, you can request a `Provider` instance that will only initialize the dependency if/when you call its `get()` method. 
 
 3. Try it by running an application that depends on your `@MySpecialAnalysis` analysis. It may be a good idea to extend the `experts-visualizer` application, so that you can see the results.
