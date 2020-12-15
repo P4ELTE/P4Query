@@ -1,0 +1,13 @@
+
+<project name="tz-task6-expert" default="test" basedir=".">
+    <target name="tz-task6-implem" extensionOf="tz-task6">
+        <java classname="p4analyser.experts.tztask6.App">
+            <arg value="${host}"/>
+            <arg value="${port}"/>
+            <arg value="${remoteTraversalSourceName}"/>
+        </java>
+        
+        <echo message="OK"></echo>
+    </target>
+
+</project>

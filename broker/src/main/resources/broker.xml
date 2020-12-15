@@ -53,6 +53,12 @@
     </javaresource>
     </import>
 
+    <import>
+    <javaresource name="tz-task6.xml">
+        <classpath/>
+    </javaresource>
+    </import>
+
     <import optional="${optinalTestXml}">
         <javaresource name="tests.xml">
              <classpath/>
@@ -80,6 +86,8 @@
 
 
     <extension-point name="visualisation" depends="syntax-tree, aliases, symbol-table, call-graph, control-flow, call-sites"/>
+
+    <extension-point name="tz-task6" depends="syntax-tree"/>
 
     <target name="run" depends="visualisation"></target>
     <target name="test" depends="TEST-DEPENDS"></target>
