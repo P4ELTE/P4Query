@@ -12,6 +12,12 @@
     </import>
 
     <import>
+    <javaresource name="nr-task4.xml">
+        <classpath/>
+    </javaresource>
+    </import>
+
+    <import>
     <javaresource name="normalised-syntax-tree.xml">
         <classpath/>
     </javaresource>
@@ -68,6 +74,9 @@
     <extension-point name="demo" depends=""/>
     <extension-point name="syntax-tree" depends="demo"/>
 
+    <extension-point name="nr-task4" depends="syntax-tree"/>
+    <extension-point name="tz-task6" depends="syntax-tree"/>
+
     <extension-point name="normalised-syntax-tree" depends="syntax-tree"/>
 
     <extension-point name="aliases" depends="syntax-tree"/>
@@ -84,10 +93,7 @@
     <extension-point name="call-sites" depends="symbol-table, aliases, syntax-tree"/>
     <extension-point name="control-flow" depends="symbol-table, aliases, syntax-tree"/>
 
-
     <extension-point name="visualisation" depends="syntax-tree, aliases, symbol-table, call-graph, control-flow, call-sites"/>
-
-    <extension-point name="tz-task6" depends="syntax-tree"/>
 
     <target name="run" depends="visualisation"></target>
     <target name="test" depends="TEST-DEPENDS"></target>
