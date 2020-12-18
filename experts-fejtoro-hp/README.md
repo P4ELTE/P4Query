@@ -13,7 +13,7 @@ Teszt kimenet: 538. sor (pl. nodeId=4227)
    * `hdr.ipv4` megkeresése
    * `hdr.ipv4.isValid()` megkeresése
    * Mindkettő egy `and()` parancscsal teljesíthető, és ezt az if-es csúcsnál két szinttel lejjebb található `ExpressionContext` osztályú node-ból indul.
-   * Az `and()`-en belül addig lépünk a kifelé vezető csúcson, amíg a keresett `value`-t meg nem találtuk
+   * Az `and()`-en belül addig lépünk a kifelé vezető éleken, amíg a keresett `value`-t meg nem találtuk
 4. Végül visszadja a talált csúcsok sorának a számát
 
 ## Általánosítás
