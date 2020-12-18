@@ -22,6 +22,7 @@
     <module>experts-normalised-syntax-tree</module>
     <module>experts-tz-task6</module>
     <module>experts-nr-task4</module>
+    <module>experts-fejtoro-hp</module>
   </modules>
 
   <name>p4analyser</name>
