@@ -65,6 +65,12 @@
     </javaresource>
     </import>
 
+    <import>
+    <javaresource name="experts-fejtoro-hp.xml">
+        <classpath/>
+    </javaresource>
+    </import>
+
     <import optional="${optinalTestXml}">
         <javaresource name="tests.xml">
              <classpath/>
@@ -76,6 +82,7 @@
 
     <extension-point name="nr-task4" depends="syntax-tree"/>
     <extension-point name="tz-task6" depends="syntax-tree"/>
+    <extension-point name="experts-fejtoro-hp" depends="syntax-tree"/>
 
     <extension-point name="normalised-syntax-tree" depends="syntax-tree"/>
 
@@ -95,6 +102,6 @@
 
     <extension-point name="visualisation" depends="syntax-tree, aliases, symbol-table, call-graph, control-flow, call-sites"/>
 
-    <target name="run" depends="visualisation"></target>
+    <target name="run" depends="experts-fejtoro-hp"></target>
     <target name="test" depends="TEST-DEPENDS"></target>
 </project>
