@@ -1,0 +1,13 @@
+<project name="p4parser" default="test" basedir="."> 
+    <target name="p4parser" extensionOf="syntax-tree">
+        <java classname="p4analyser.ExpertHI">
+            <arg value="${host}"/>
+            <arg value="${port}"/>
+            <arg value="${remoteTraversalSourceName}"/>
+            <arg value="${p4ProgramSourceName}"/>
+        </java>
+        
+        <echo message="OK"></echo>
+    </target>
+
+</project>
