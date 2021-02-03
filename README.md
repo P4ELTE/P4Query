@@ -112,6 +112,46 @@ Or with less Maven noise:
 $ mvn exec:java -pl controller
 ```
 
+### How to make jar
+It needs a new plugin with which we can make the jar. You need to add this to the main `pom.xml`, after the compiler plugin.
+
+```
+ <plugin>
+	<artifactId>maven-assembly-plugin</artifactId>
+    <configuration>
+	  <archive>
+	    <manifest>
+		  <mainClass>p4analyser.broker.App</mainClass>
+	    </manifest>
+	  </archive>
+	  <descriptorRefs>
+	    <descriptorRef>jar-with-dependencies</descriptorRef>
+	  </descriptorRefs>
+	  <finalName>p4analyser</finalName>
+    </configuration>
+  </plugin>
+```
+
+Run the following command in the (VSCode) Terminal:
+
+```sh
+$ mvn clean compile assembly:single
+```
+
+If the running is succesfull, you will find a `p4analyser-jar-with-dependencies.jar` in the `./broker/target` folder.
+
+From the terminal you can run this jar with or without an argument:
+
+```sh
+$ java -jar p4analyser-jar-with-dependencies.jar
+ or
+$ java -jar p4analyser-jar-with-dependencies.jar "verify"
+```
+
+**Now, it makes the jar, and I can start it, but I think there is a problem with the usage of the File class from starting the jar.**
+
+**In Windows I got this:** java.lang.IllegalStateException: Error parsing Gremlin client file at file:/D:/Egyetem/Doktori/tanszeki/ELTE-P4-Analyzer/broker/target/p4analyser-jar-with-dependencies.jar!/conf/remote-graph.properties 
+
 ### VSCode an Java 8
 
 The VSCode Java plugin requires Java 11 or newer, but projects can still be built using Java 8. 
