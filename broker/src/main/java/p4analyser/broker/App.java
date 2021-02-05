@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.annotation.Annotation;
@@ -18,6 +19,7 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -66,18 +68,30 @@ public class App {
     private static final Collection<Class<?>> DO_NOT_SERIALIZE = Arrays.asList(GraphTraversalSource.class);
 
     private static final ClassLoader loader = Thread.currentThread().getContextClassLoader();
-    private static String GREMLIN_CLIENT_CONF_PATH = loader.getResource("conf/remote-graph.properties").getPath();
+    private static String GREMLIN_CLIENT_CONF_PATH;
+
     // NOTE Unlike with YAML, we can use "classpath:" notation in .properties files,
     // so it turned out we don't need this:
     // private static String GREMLIN_CLIENT_CONF_CLUSTERFILE_PATH =
     // loader.getResource("conf/remote-objects.yaml").getPath();
 
-    public static final String CORE_P4 = loader.getResource("core.p4").getPath().toString();
-    public static final String V1MODEL_P4 = loader.getResource("v1model.p4").getPath().toString();
-    public static final String BASIC_P4 = loader.getResource("basic.p4").getPath().toString();
+    public static final String CORE_P4 ;
+    public static final String V1MODEL_P4;
+    public static final String BASIC_P4 ;
+
     private static Boolean isWindows = SystemUtils.OS_NAME.contains("Windows");
 
     static {
+        try {
+            GREMLIN_CLIENT_CONF_PATH = contentsToTempFile(
+                loader.getResourceAsStream("conf/remote-graph.properties"), "conf/remote-graph.properties");
+            CORE_P4 = contentsToTempFile(loader.getResourceAsStream("core.p4"), "core.p4");
+            V1MODEL_P4 = contentsToTempFile(loader.getResourceAsStream("v1model.p4"), "v1model.p4");
+            BASIC_P4 = contentsToTempFile(loader.getResourceAsStream("basic.p4"), "basic.p4");
+        } catch(IOException e){
+            throw new RuntimeException(e);
+        }
+
         rightPaths();
         loadClientConfig();
     }
@@ -103,6 +117,17 @@ public class App {
         broker.server.close();
         System.exit(0);
     }
+
+    private static String contentsToTempFile(InputStream is, String fileName) throws IOException {
+        File f = new File(System.getProperty("java.io.tmpdir"), fileName);
+        f.getParentFile().mkdirs();
+        f.createNewFile();
+
+        Files.copy(is, f.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+        return f.getAbsolutePath();
+    }
+
 
     private Feather feather;
     private LocalGremlinServer server;
