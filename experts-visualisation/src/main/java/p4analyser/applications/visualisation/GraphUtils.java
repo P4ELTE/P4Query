@@ -41,11 +41,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
+import java.nio.file.StandardCopyOption;
+import java.io.InputStream;
+
+
 
 public class GraphUtils {
 
     private static final ClassLoader loader = Thread.currentThread().getContextClassLoader();
-    public static final String GRAPHML2DOT_XSL = loader.getResource("graphml2dot.xsl").getPath().toString();
+    public static final String GRAPHML2DOT_XSL;
+    
+    static {
+        try {
+            GRAPHML2DOT_XSL =contentsToTempFile(loader.getResourceAsStream("graphml2dot.xsl"), "graphml2dot.xsl");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }    
 
     // TODO this is redundant. eliminate it and use the names in Dom
     public static enum Label {
@@ -191,6 +203,16 @@ public class GraphUtils {
 
     return dotPath;
   }
+
+  private static String contentsToTempFile(InputStream is, String fileName) throws IOException {
+    File f = new File(System.getProperty("java.io.tmpdir"), fileName);
+    f.getParentFile().mkdirs();
+    f.createNewFile();
+
+    Files.copy(is, f.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+    return f.getAbsolutePath();
+}
 
 
   /**

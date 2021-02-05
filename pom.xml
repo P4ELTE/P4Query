@@ -102,6 +102,21 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.8.0</version>
         </plugin>
+         <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+            <archive>
+              <manifest>
+              <mainClass>p4analyser.broker.App</mainClass>
+              </manifest>
+            </archive>
+            <descriptorRefs>
+              <descriptorRef>jar-with-dependencies</descriptorRef>
+            </descriptorRefs>
+            <finalName>p4analyser</finalName>
+            </configuration>
+          </plugin>
+
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>2.22.1</version>

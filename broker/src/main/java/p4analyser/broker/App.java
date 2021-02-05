@@ -51,9 +51,6 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
-import org.apache.commons.lang.SystemUtils;
-
-
 public class App {
 
     // private static final List<Class<? extends Annotation>> analyses =
@@ -79,8 +76,6 @@ public class App {
     public static final String V1MODEL_P4;
     public static final String BASIC_P4 ;
 
-    private static Boolean isWindows = SystemUtils.OS_NAME.contains("Windows");
-
     static {
         try {
             GREMLIN_CLIENT_CONF_PATH = contentsToTempFile(
@@ -92,7 +87,6 @@ public class App {
             throw new RuntimeException(e);
         }
 
-        rightPaths();
         loadClientConfig();
     }
 
@@ -443,12 +437,6 @@ public class App {
 		out.close();
 		System.out.println("Serialized the injector state: " + singletons);
 	}
-
-    private static void rightPaths() {
-        if (isWindows) {
-            GREMLIN_CLIENT_CONF_PATH = GREMLIN_CLIENT_CONF_PATH.substring(1);
-        }
-    }
 
     private static Configuration loadClientConfig() {
         Configuration c;

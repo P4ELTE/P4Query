@@ -23,6 +23,12 @@ import org.apache.tinkerpop.gremlin.process.traversal.AnonymousTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.codejargon.feather.Provides;
 
+import java.io.File;
+import java.io.InputStream;
+import java.nio.file.StandardCopyOption;
+
+
+
 // NOTE For future reference, this guide was helpful: http://emehrkay.com/getting-started-with-tinkerpop-s-gremlin-server-and-gizmo-python
 // NOTE The official way would have been to use gremlin-server.sh or gremlin-server.bat.
 
@@ -30,13 +36,21 @@ import org.codejargon.feather.Provides;
 public class LocalGremlinServer {
 
     private static ClassLoader loader = Thread.currentThread().getContextClassLoader();
-    private static String GREMLIN_SERVER_CONF_PATH = loader.getResource("conf/gremlin-server-min.yaml").getPath();
-    private static String TINKERGRAPH_EMPTY_PROPERTIES_PATH = loader.getResource("conf/tinkergraph-empty.properties").getPath();
-    private static String EMPTY_SAMPLE_GROOVY_PATH = loader.getResource("conf/empty-sample.groovy").getPath();
+    private static String GREMLIN_SERVER_CONF_PATH;
+    private static String TINKERGRAPH_EMPTY_PROPERTIES_PATH;
+    private static String EMPTY_SAMPLE_GROOVY_PATH;
     private static Boolean isWindows = SystemUtils.OS_NAME.contains("Windows");
 
     static {
-        rightPaths();
+        try {
+            GREMLIN_SERVER_CONF_PATH = contentsToTempFile(
+                loader.getResourceAsStream("conf/gremlin-server-min.yaml"), "conf/gremlin-server-min.yaml");
+            TINKERGRAPH_EMPTY_PROPERTIES_PATH = contentsToTempFile(loader.getResourceAsStream("conf/tinkergraph-empty.properties"), "conf/tinkergraph-empty.properties");
+            EMPTY_SAMPLE_GROOVY_PATH = contentsToTempFile(loader.getResourceAsStream("conf/empty-sample.groovy"), "conf/empty-sample.groovy");
+        } catch(IOException e){
+            throw new RuntimeException(e);
+        }
+
         updateServerConfig();
     }
 
@@ -124,15 +138,6 @@ public class LocalGremlinServer {
             bb.close();
 
     }
-    
-    // NOTE: The paths start with a "/". In windows it is a problem, we need to cut it out.
-    private static void rightPaths() {
-        if (isWindows) {
-            GREMLIN_SERVER_CONF_PATH = GREMLIN_SERVER_CONF_PATH.substring(1);
-            TINKERGRAPH_EMPTY_PROPERTIES_PATH = TINKERGRAPH_EMPTY_PROPERTIES_PATH.substring(1);
-            EMPTY_SAMPLE_GROOVY_PATH = EMPTY_SAMPLE_GROOVY_PATH.substring(1);
-        }
-    }
 
     // NOTE: GremlinServer does not seem to substitute "classpath:" inside the YAML, so we have to include the path manually
     private static void updateServerConfig() {
@@ -145,8 +150,8 @@ public class LocalGremlinServer {
             
             //In windows we need these: ""
             if (isWindows) {
-                content = content.replaceAll("TINKERGRAPH_EMPTY_PROPERTIES", "\"" + TINKERGRAPH_EMPTY_PROPERTIES_PATH + "\"");
-                content = content.replaceAll("EMPTY_SAMPLE_GROOVY", "\"" + EMPTY_SAMPLE_GROOVY_PATH + "\"");
+                content = content.replaceAll("TINKERGRAPH_EMPTY_PROPERTIES", "\"" + TINKERGRAPH_EMPTY_PROPERTIES_PATH.replace("\\", "/") + "\"");
+                content = content.replaceAll("EMPTY_SAMPLE_GROOVY", "\"" + EMPTY_SAMPLE_GROOVY_PATH.replace("\\", "/") + "\"");
             } else {
                 content = content.replaceAll("TINKERGRAPH_EMPTY_PROPERTIES", TINKERGRAPH_EMPTY_PROPERTIES_PATH);
                 content = content.replaceAll("EMPTY_SAMPLE_GROOVY", EMPTY_SAMPLE_GROOVY_PATH);
@@ -155,8 +160,18 @@ public class LocalGremlinServer {
             Files.write(path, content.getBytes(charset));
 //            System.out.println(Files.lines(Paths.get(GREMLIN_SERVER_CONF_PATH)).collect(Collectors.toList()));
         } catch (IOException e1) {
-            throw new IllegalStateException("Failed to edit config file "+GREMLIN_SERVER_CONF_PATH);
+            throw new IllegalStateException("Failed to edit config file "+ GREMLIN_SERVER_CONF_PATH);
         }
+    }
+
+    private static String contentsToTempFile(InputStream is, String fileName) throws IOException {
+        File f = new File(System.getProperty("java.io.tmpdir"), fileName);
+        f.getParentFile().mkdirs();
+        f.createNewFile();
+
+        Files.copy(is, f.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+        return f.getAbsolutePath();
     }
 
 }
