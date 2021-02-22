@@ -10,6 +10,7 @@
             "request": "launch",
             "mainClass": "p4analyser.broker.App",
             "projectName": "broker",
+            "args": ["verify"]
         },
         {
             "type": "java",
