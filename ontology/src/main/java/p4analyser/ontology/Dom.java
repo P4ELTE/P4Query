@@ -18,6 +18,7 @@ public class Dom {
    public static final String SITES = "sites";
    public static final String SYMBOL = "symbol";
    public static final String STRUCT = "struct";
+   public static final String CHECKING = "checking";
 
    public static class Syn {
     public static class E {
@@ -161,4 +162,20 @@ public class Dom {
 
         }
    }
+
+   public static class Checking {
+
+        public static final String ROLE = "role";
+
+        public static class Role {
+            public static final String READ  = "read";
+            public static final String WRITE = "write";
+            public static final String KEY   = "key";
+            public static final String NEXT  = "next";
+            public static final String NAME = "name";
+            public static final String CALL = "call";
+            public static final String METHOD = "method";
+            public static final String INST = "inst";
+        }
+}
 }

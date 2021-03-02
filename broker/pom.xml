@@ -116,6 +116,13 @@
 
     <dependency>
       <groupId>p4analyser</groupId>
+      <artifactId>experts-verification</artifactId>
+      <version>1.0-SNAPSHOT</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>p4analyser</groupId>
       <artifactId>experts-nr-task4</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>

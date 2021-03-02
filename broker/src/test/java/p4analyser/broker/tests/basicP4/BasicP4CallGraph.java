@@ -1,4 +1,4 @@
-package p4analyser.broker.basicP4;
+package p4analyser.broker.tests.basicP4;
 
 import org.junit.Test;
 

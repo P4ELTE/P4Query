@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!--
 
-    Copyright 2020, Eötvös Loránd University.
+    Copyright 2020, Eï¿½tvï¿½s Lorï¿½nd University.
     All rights reserved.
 
 --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -24,6 +24,7 @@
     <module>experts-control-flow</module>
     <module>experts-call-sites</module>
     <module>experts-nr-task4</module>
+    <module>experts-verification</module>
   </modules>
 
   <name>p4analyser</name>

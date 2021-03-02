@@ -2,7 +2,9 @@
  * Copyright 2020, Eötvös Loránd University.
  * All rights reserved.
  */
-package p4analyser.broker.basicTunnelP4;
+package p4analyser.broker.suites.resourceSuites;
+
+import p4analyser.broker.tests.basicTunnelP4.*;
 
 import org.junit.ClassRule;
 import org.junit.runner.RunWith;
