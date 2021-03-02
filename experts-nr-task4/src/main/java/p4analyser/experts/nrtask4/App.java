@@ -29,13 +29,58 @@ public class App {
         GraphTraversalSource g = AnonymousTraversalSource.traversal()
                 .withRemote(DriverRemoteConnection.using(host, port, remoteTraversalSourceName));
 
-        List<Object> result = analyse(g, "ethernet", "etherType");
+        Map<Object, Object> result = analyse(g, "ethernet", "etherType");
 
         System.out.println(result);
     }
 
-    public static List<Object> analyse(GraphTraversalSource g, Object header, Object field) {
-        return g.V().has(Dom.Syn.V.CLASS,"SelectExpressionContext")
+    public static Map<Object, Object> analyse(GraphTraversalSource g, Object header, Object field) {
+
+        return (
+            g.V().has(Dom.Syn.V.CLASS,"SelectExpressionContext")
+            .and(
+                __.outE(Dom.SYN).has(Dom.Syn.E.RULE, "expressionList").inV()
+                .and(
+                    __.repeat(__.out(Dom.SYN)).until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")).has(Dom.Syn.V.VALUE, "hdr"),
+                    __.repeat(__.out(Dom.SYN)).until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")).has(Dom.Syn.V.VALUE, header),
+                    __.repeat(__.out(Dom.SYN)).until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")).has(Dom.Syn.V.VALUE, field)
+                )
+            )
+            .group()
+            .by(
+                __.inE(Dom.SYN)
+                .has(Dom.Syn.E.RULE, "selectExpression").outV().repeat(__.in(Dom.SYN))
+                .until(__.has(Dom.Syn.V.CLASS, "ParserStateContext"))
+                .group()
+                .by(
+                    __.inE(Dom.SYN)
+                    .has(Dom.Syn.E.RULE, "parserState").outV().repeat(__.in(Dom.SYN))
+                    .until(__.has(Dom.Syn.V.CLASS, "ParserDeclarationContext"))
+                    .outE(Dom.SYN).has(Dom.Syn.E.RULE, "parserTypeDeclaration").inV()
+                    .outE(Dom.SYN).has(Dom.Syn.E.RULE, "name").inV()
+                    .repeat(__.out(Dom.SYN))
+                    .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+                    .values(Dom.Syn.V.VALUE)
+                )
+                .by(
+                    __.outE(Dom.SYN).has(Dom.Syn.E.RULE, "name").inV()
+                    .repeat(__.out(Dom.SYN))
+                    .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+                    .values(Dom.Syn.V.VALUE)
+                )
+            )
+            .by(
+                __.outE(Dom.SYN)
+                .has(Dom.Syn.E.RULE, "selectCaseList").inV().repeat(__.out(Dom.SYN))
+                .until(__.has(Dom.Syn.V.CLASS, "SelectCaseContext"))
+                .outE(Dom.SYN).has(Dom.Syn.E.RULE, "keysetExpression")
+                .inV().repeat(__.out(Dom.SYN))
+                .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+                .values(Dom.Syn.V.VALUE).fold()
+            )
+        ).next();
+
+        /*return g.V().has(Dom.Syn.V.CLASS,"SelectExpressionContext")
             .and(
                 __.outE(Dom.SYN).has(Dom.Syn.E.RULE, "expressionList").inV()
                 .and(
@@ -51,8 +96,10 @@ public class App {
             .inV().repeat(__.out(Dom.SYN))
             .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
             .values(Dom.Syn.V.VALUE).toList();
+        */
 
     }
+
 
     public static List<Object> analyseWithOrdering(GraphTraversalSource g, Object header, Object field) {
         /*return g.V().has(Dom.Syn.V.CLASS,"SelectExpressionContext")

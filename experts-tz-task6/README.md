@@ -22,11 +22,9 @@ A megvalósítás során a Gremlin ismeretem finomítása volt a cél, ezáltal 
 
 1. Kigyűjtöm a **KeyElementContext** `class`-szal rendelkező csúcsok **TerminalNodeImpl** `class`-szal rendelkező csúcsinak a `value` és `nodeId` mezőjét.
 1. Az 1. lépésben kigyűjtött adatokból az 1. Megoldáshoz hasonlóan kulcs-érték pár halmazt csinálok, majd egy ellenőrzést hajtok végre rajta és kigyűjtöm a megfelelő **KeyElementContext** `nodeId`-kat.
-1. A **TableDeclarationContext** `class`-szal rendelkező csúcsokból kiszűröm azokat melyek relkeznek olyan gyerek csúccsal, ami **KeyElementContext** `class`-szal rendelkezik és a `nodeId`-ja szerepel a 2. lépésben kigyűjtött listában. Majd a megmaradt **TableDeclarationContext** csúcsoknak kikeresem a nevét az 1. Megoldás 6. lépéséhez hasonlóan.
+1. A **TableDeclarationContext** `class`-szal rendelkező csúcsokból kiszűröm azokat melyek rendelkeznek olyan gyerek csúccsal, ami **KeyElementContext** `class`-szal rendelkezik és a `nodeId`-ja szerepel a 2. lépésben kigyűjtött listában. Majd a megmaradt **TableDeclarationContext** csúcsoknak kikeresem a nevét az 1. Megoldás 6. lépéséhez hasonlóan. Valamint visszaadom, hogy a kulcs milyen módon szerepel a **lookup** során és a táblához tartozó összes kulcsot.
 
 ## Általánosítás
 
 1. Paraméterként legyen megadható a fejléc (fent: ipv4), illetve a mező (fent: dstAddr) neve.
-    - A 3. Megoldásban implementálásra került.
 1. A kimenetnél adja vissza azt is, hogy milyen módon szerepel a kulcs a lookup során (a fenti példánál lpm), illetve, hogy az adott kulcs mellett milyen más kulcsok szerepelnek még ugyanezen táblánál.
-    - Minden szükséges adat rendelkezésre áll. Az implementáció még nem készült el.

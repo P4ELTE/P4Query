@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.Vector;
 
 import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection;
@@ -25,48 +27,140 @@ public class App {
         GraphTraversalSource g = AnonymousTraversalSource.traversal()
                 .withRemote(DriverRemoteConnection.using(host, port, remoteTraversalSourceName));
 
-        System.out.println(analyse2(g, "ipv4", "dstAddr"));
+        System.out.println(analyse(g, "ipv4", "dstAddr"));
     }
 
     // 3. Megoldás
 
-    public static List<Object> analyse(GraphTraversalSource g, String header, String field) {
-        Map<Object, Object> query =
-            g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "KeyElementContext")
-                .group()
-                .by(__.values(Dom.Syn.V.NODE_ID))
-                .by(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV()
-                    .repeat(__.out(Dom.SYN))
+    public static Map<Object, Object> analyse(GraphTraversalSource g, String header, String field) {
+        Map<Object, Object> query = g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "KeyElementContext")
+            .group()
+            .by(__.values(Dom.Syn.V.NODE_ID))
+            .by(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV().repeat(__.out(Dom.SYN))
                     .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
                     .filter(__.values(Dom.Syn.V.VALUE).is(P.neq(".")))
-                    .values(Dom.Syn.V.NODE_ID, Dom.Syn.V.VALUE).fold()).next();
+                    .values(Dom.Syn.V.NODE_ID, Dom.Syn.V.VALUE)
+                    .fold())
+            .next();
 
-        List<Object> keyElementContextNodeIds = new ArrayList<Object>();           
+        List<Object> keyElementContextNodeIds = new ArrayList<Object>();
 
-        for (Object nodeId: query.keySet()) {
+        for (Object nodeId : query.keySet()) {
             List<Object> valuesList = (List<Object>) query.get(nodeId);
             Map<String, Long> map = new HashMap<String, Long>();
 
-            for (int i = 0; i < valuesList.size(); i+=2) {
-                map.put((String)valuesList.get(i), (Long)valuesList.get(i + 1));
+            for (int i = 0; i < valuesList.size(); i += 2) {
+                map.put((String) valuesList.get(i), (Long) valuesList.get(i + 1));
             }
 
-            if (map.size() == 3 && map.containsKey("hdr") && map.containsKey(header) && map.containsKey(field) &&
-                map.get("hdr") < map.get(header) && map.get(header) < map.get(field)) {
-                    keyElementContextNodeIds.add(nodeId);
+            if (map.size() == 3 && map.containsKey("hdr") && map.containsKey(header) && map.containsKey(field)
+                    && map.get("hdr") < map.get(header) && map.get(header) < map.get(field)) {
+                keyElementContextNodeIds.add(nodeId);
             }
         }
+
+        return
+            (g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "KeyElementContext")
+                .filter(__.values(Dom.Syn.V.NODE_ID).is(P.within(keyElementContextNodeIds)))
+                .group()
+                .by(__.group()
+                    .by(__.inE(Dom.SYN).outV().repeat(__.in(Dom.SYN))
+                        .until(__.has(Dom.Syn.V.CLASS, "TableDeclarationContext"))
+                        .outE(Dom.SYN).has(Dom.Syn.E.RULE, "name").inV()
+                        .repeat(__.out(Dom.SYN))
+                        .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+                        .values(Dom.Syn.V.VALUE))
+
+                    .by(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "name").inV()
+                        .repeat(__.out(Dom.SYN))
+                        .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+                        .values(Dom.Syn.V.VALUE)))
+
+                .by(__.inE(Dom.SYN).outV().inE(Dom.SYN).outV().inE(Dom.SYN).outV().outE(Dom.SYN).inV()
+                    .repeat(__.out(Dom.SYN))
+                    .until(__.has(Dom.Syn.V.CLASS, "KeyElementContext"))
+                    .outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV()
+
+                    .outE(Dom.SYN).inV()
+                    .repeat(__.out(Dom.SYN))
+                    .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+                    .filter(__.values(Dom.Syn.V.VALUE).is(P.neq(".")))
+                    .values(Dom.Syn.V.VALUE)
+                    .fold()
+                )
+            ).next();
+
+
+        //TerminalNodes próbálása
         
-        return g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "TableDeclarationContext")
-            .filter(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "tablePropertyList").inV()
-                .repeat(__.out(Dom.SYN))
-                .until(__.has(Dom.Syn.V.CLASS, "KeyElementContext"))
-                .values(Dom.Syn.V.NODE_ID).is(P.within(keyElementContextNodeIds))
-            )
-            .outE(Dom.SYN).has(Dom.Syn.E.RULE, "name").inV()
-                .repeat(__.out(Dom.SYN))
+        /*
+         * System.out.println(
+         * terminalNodes(g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS,
+         * "KeyElementContext").outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV())
+         * );
+         */
+
+        /*Object compare = "hdr." + header + "." + field;
+
+        System.out.println(g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "KeyElementContext")
+                .filter(
+                    terminalNodes(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV())
+                    .is(P.eq(compare))
+                )
+                .values(Dom.Syn.V.NODE_ID)
+
+        // terminalNodes(g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS,
+        // "KeyElementContext").outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV())
+        );*/
+
+
+        // Általánosítás előtti visszatérési érték.
+
+        /*return g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "TableDeclarationContext")
+                .filter(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "tablePropertyList").inV().repeat(__.out(Dom.SYN))
+                        .until(__.has(Dom.Syn.V.CLASS, "KeyElementContext")).values(Dom.Syn.V.NODE_ID)
+                        .is(P.within(keyElementContextNodeIds)))
+                .outE(Dom.SYN).has(Dom.Syn.E.RULE, "name").inV().repeat(__.out(Dom.SYN))
+                .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")).values(Dom.Syn.V.VALUE).toList();*/
+    }
+
+    public static Object terminalNodes(GraphTraversal<Vertex, Vertex> g) {
+        List<Object> objects =
+            (
+                g.repeat(__.out(Dom.SYN))
                 .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
-                .values(Dom.Syn.V.VALUE).toList();
+                .values(Dom.Syn.V.NODE_ID, Dom.Syn.V.VALUE)
+                .fold()
+            ).next();
+
+        Map<Long, String> map = new HashMap<Long, String>();
+
+        for (int i = 0; i < objects.size(); i += 2) {
+            map.put((Long) objects.get(i + 1), (String) objects.get(i));
+        }
+
+        SortedSet<Long> keys = new TreeSet<Long>(map.keySet());
+
+        StringBuilder result = new StringBuilder();
+
+        for (Long key : keys) {
+            result.append(map.get(key));
+        }
+
+        return result;
+
+        //Próbálkozás, hogy gremlinnek megfelelő formátummal térjen vissza a függvény :(
+
+        /*DefaultGraphTraversal<Element, Object> defaultGraphTraversal = new DefaultGraphTraversal<Element, Object>();
+
+        defaultGraphTraversal.asAdmin().getBytecode().addStep(Symbols.values, Dom.Syn.V.VALUE);
+        return defaultGraphTraversal.asAdmin()
+                .addStep(new PropertiesStep<>(defaultGraphTraversal.asAdmin(), new PropertyKeyStep(defaultGraphTraversal), Dom.Syn.V.VALUE));
+        
+        //.addStep(new PropertiesStep<>(defaultGraphTraversal.asAdmin(), result, Dom.Syn.V.VALUE));
+        */
+
+        //return new DefaultGraphTraversal<>(); //new GraphTraversal<Element, Object>();
     }
 
     // 2. Megoldás
