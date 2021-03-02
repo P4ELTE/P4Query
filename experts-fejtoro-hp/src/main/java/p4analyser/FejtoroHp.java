@@ -7,8 +7,7 @@ import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection;
 import org.apache.tinkerpop.gremlin.process.traversal.AnonymousTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.structure.Property;
-import org.apache.tinkerpop.shaded.jackson.annotation.JsonTypeInfo.Id;
+
 
 import p4analyser.ontology.Dom;
 
@@ -22,8 +21,6 @@ public class FejtoroHp {
         GraphTraversalSource g = AnonymousTraversalSource.traversal()
                 .withRemote(DriverRemoteConnection.using(host, port, remoteTraversalSourceName));
 
-        //List<Object> list = analyse_2(g, "ipv4");
-        //System.out.println(analyse(g, "ipv4"));
         List<Object> list = analyse(g, "ipv4");
         System.out.println(getPropertyFromList(Dom.Syn.V.LINE, list));
         System.out.println(getControl(g, getPropertyFromList(Dom.Syn.V.NODE_ID, list)));
