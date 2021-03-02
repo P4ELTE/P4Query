@@ -1,4 +1,4 @@
-package p4analyser.broker.basicTunnelP4;
+package p4analyser.broker.tests.basicTunnelP4;
 
 import org.junit.Test;
 
