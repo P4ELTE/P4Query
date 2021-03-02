@@ -245,7 +245,7 @@ Applications will be accessed by users. Accordingly, all applications must defin
              return new String[]{"myApp", "MyApp", "my", "ma"};
          }
 
-         @Parameter(names = { "-s", "--syntax-tree" },
+         @Parameter(names = { "-st", "--syntax-tree" },
                     description = "Triggers syntax tree analysis")
          private Boolean synTree;
 

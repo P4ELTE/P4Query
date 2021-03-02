@@ -102,6 +102,13 @@
 
     <dependency>
       <groupId>p4analyser</groupId>
+      <artifactId>experts-tz-task6</artifactId>
+      <version>1.0-SNAPSHOT</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>p4analyser</groupId>
       <artifactId>experts-call-sites</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
