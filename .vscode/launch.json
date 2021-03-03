@@ -9,8 +9,7 @@
             "name": "Debug (Launch)-App<broker>",
             "request": "launch",
             "mainClass": "p4analyser.broker.App",
-            "projectName": "broker",
-            "args": ["tztask", "-st"]
+            "projectName": "broker"
         },
         {
             "type": "java",

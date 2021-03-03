@@ -24,6 +24,7 @@
     <module>experts-control-flow</module>
     <module>experts-call-sites</module>
     <module>experts-tz-task6</module>
+    <module>experts-nr-task4</module>
     <module>experts-verification</module>
   </modules>
 
