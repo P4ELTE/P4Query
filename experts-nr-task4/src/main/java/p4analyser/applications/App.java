@@ -3,8 +3,10 @@ package p4analyser.applications;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.codejargon.feather.Provides;
 
 import java.io.File;
@@ -52,9 +54,9 @@ public class App implements Application {
       
       System.out.println(g.V().count().next());
 
-      Map<Object, Object> result = analyse(g, "ethernet", "etherType");
+      	Map<Object, Object> result = analyse(g, "ethernet", "etherType");
 
-	  System.out.println("Task4 done. Result: " + result);
+	  System.out.println("Task4 done. Result:" + result);
 
       return new Status();
   }
@@ -107,4 +109,19 @@ public class App implements Application {
 
 	}
 
+	public static Object an(GraphTraversalSource g, Object header, Object field) {
+
+		return 
+			g.V().has(Dom.Syn.V.CLASS,"SelectExpressionContext")
+			.and(
+				__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "expressionList").inV()
+				.and(
+					__.repeat(__.out(Dom.SYN)).until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")).has(Dom.Syn.V.VALUE, "hdr"),
+					__.repeat(__.out(Dom.SYN)).until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")).has(Dom.Syn.V.VALUE, header),
+					__.repeat(__.out(Dom.SYN)).until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")).has(Dom.Syn.V.VALUE, field)
+				)
+			)
+			.values(Dom.Syn.V.NODE_ID).toList();
+
+	}
 }
