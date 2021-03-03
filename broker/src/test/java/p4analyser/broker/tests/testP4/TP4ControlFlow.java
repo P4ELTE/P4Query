@@ -1,4 +1,4 @@
-package p4analyser.broker.testP4;
+package p4analyser.broker.tests.testP4;
 
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
