@@ -142,20 +142,47 @@ control MyDeparser(packet_out packet, in headers hdr) {
 	% egyéb toolok - Vera,  - Gabi
 	% Akár gremlin/gráf alapú dolgok, ami nem p4 (akár refactorerl) - mindenki
 	
+
 	\section{Motivation}
 	% max 1 hasáb - lehet intorba megy - Máté
 	% p4-re vannak elemzések kéne fejlesztés segítő eszköz
 	% ehhez egységes keretrendszer - vannak már ilyesmik related workben
 	
-	
 	\section{Analysis framework}
+
+
+
 	\subsection{Representation - Architecture} % 4 hasáb - Dániel
 	% belső gráf, a koncepció
 	% elemzések
 	% app megvalósítás
+
+  \begin{figure}
+    \includegraphics[width=0.18\textwidth]{figures/arch-top.pdf}
+    \caption{TODO}\label{fig:arch-top}
+  \end{figure}
+
+  \begin{itemize}
+    \item Figure \ref{fig:arch-top} 
+    \item User extracts information (including metrics, object codes, verified properties) from the code using applications (corresp. backends). Applications provide services by utilizing the code knowledge stored in the knowledge graph by the analysers of the infrastructure layer (corresp. frontend). The collaboration of the application and the analysers is orchestrated by a controller module.
+  \end{itemize}
 	
 	\subsection{Experts} % 1 hasáb - Dániel
 	% kisebb gráf ábra
+
+  \begin{figure}
+    \includegraphics[width=0.3\textwidth]{figures/arch-deps.pdf}
+    \caption{TODO}\label{fig:arch-deps}
+  \end{figure}
+
+  \begin{itemize}
+    \item Figure \ref{fig:arch-deps} 
+    \item More granular.
+    \item Analysers depend on each other. Applications only depend on one or more analysers.
+    \item Controller manages dependencies.
+  \end{itemize}
+	
+
 	\subsection{Testing} % 1 hasáb - Gabi
 	% külön modul
 	% elvi részei jelenlenek meg
