@@ -2,6 +2,21 @@
 
 \usepackage{comment, graphicx, algorithm, algorithmic, listings}
 
+
+\lstdefinelanguage{P4}{
+  showlines=true,
+  morecomment=[f]{//},
+  keepspaces=true,
+  basicstyle=\scriptsize\ttfamily,
+  emphstyle=\itshape,
+  emph={},
+  commentstyle=\color{red},
+  keywordstyle=\color{blue},
+  morekeywords={typedef, header, extern, struct, parser, state, transition, in, out, inout, select, default, control, action, table, apply, if, switch}
+}
+
+
+
 \AtBeginDocument{%
 	\providecommand\BibTeX{{%
 			\normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
@@ -63,78 +78,6 @@
 	
 	\section{Introduction}
 	% P4 (max 1-1.5 hasáb) - példa (később használandó a többihez) - Máté
-	
-	
-
-\begin{table*}
-\begin{tabular}{|p{3.3cm}|p{5.9cm}|p{7.7cm}|}
-\hline
-\begin{lstlisting}[basicstyle=\scriptsize]
-header ethernet_t {
-  macAddr_t dstAddr;
-  macAddr_t srcAddr;
-  bit<16>   etherType; }
-    
-header ipv4_t {
-  bit<8>    ttl;
-  ip4Addr_t srcAddr;
-  ip4Addr_t dstAddr;... }
-    
-struct headers {
-  ethernet_t   ethernet;
-  ipv4_t       ipv4; }
-
-\end{lstlisting}
-&
-\begin{lstlisting}[basicstyle=\scriptsize]
-parser MyParser(...) {
-  state start { transition parse_ethernet; }
-  state parse_ethernet {
-    packet.extract(hdr.ethernet);
-    transition select(hdr.ethernet.etherType) {
-      TYPE_IPV4: parse_ipv4;
-      default: accept; } }
-  state parse_ipv4 {
-    packet.extract(hdr.ipv4);
-    transition accept; } }
-control MyIngress(...) {
-  apply {
-    if (hdr.ipv4.isValid()) {
-           ipv4_lpm.apply(); }
-  }         
-  action drop() {
-    mark_to_drop(standard_metadata);
-  }    
-\end{lstlisting}
-&
-\begin{lstlisting}[basicstyle=\scriptsize]
-  action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
-    standard_metadata.egress_spec = port;
-    hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-    hdr.ethernet.dstAddr = dstAddr;
-    hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
-  }    
-  table ipv4_lpm {
-    key = {  hdr.ipv4.dstAddr: lpm;  }
-    actions = {
-      ipv4_forward;
-      drop;
-      NoAction;}
-    ... }   
-}
-control MyDeparser(packet_out packet, in headers hdr) {
-  apply {
-    packet.emit(hdr.ethernet);
-    packet.emit(hdr.ipv4);}
-}
-\end{lstlisting}\\
-\hline
-\end{tabular}
-\caption{P4 example}
-  \label{code:P4}
-\end{table*}	   
-
-
 	
 	\section{Related Work}
 	% kb 1.5 hasáb
@@ -200,6 +143,86 @@ control MyDeparser(packet_out packet, in headers hdr) {
 	\subsection{Cost analysis} % 1 hasáb - Dániel
 	
 	\section{Conclusion and Future Work} % 1 hasáb - Máté
+
+\begin{figure*}
+\begin{tabular}{|p{3.3cm}|p{5.9cm}|p{7.7cm}|}
+\hline
+\begin{lstlisting}[language=P4]
+// Definitions
+typedef bit<9>  egSpec_t;
+typedef bit<48> macAddr_t;
+typedef bit<32> ip4Addr_t;
+
+// Headers
+header ethernet_t {
+  macAddr_t dstAddr;
+  macAddr_t srcAddr;
+  bit<16>   etherType; }
+    
+header ipv4_t {
+  bit<8>    ttl;
+  ip4Addr_t srcAddr;
+  ip4Addr_t dstAddr;... }
+    
+struct headers {
+  ethernet_t   ethernet;
+  ipv4_t       ipv4; }
+
+\end{lstlisting}
+&
+\begin{lstlisting}[language=P4]
+// Parser
+parser MyParser(...) {
+  state start { transition parse_ethernet; }
+  state parse_ethernet {
+    packet.extract(hdr.ethernet);
+    transition select(hdr.ethernet.etherType) {
+      TYPE_IPV4: parse_ipv4;
+      default: accept; } }
+  state parse_ipv4 {
+    packet.extract(hdr.ipv4);
+    transition accept; } }
+    
+// Control    
+control MyIngress(...) {
+  apply {
+    if (hdr.ipv4.isValid()) {
+           ipv4_lpm.apply(); }
+  }         
+  action drop() {
+    mark_to_drop(standard_metadata);
+  }    
+\end{lstlisting}
+&
+\begin{lstlisting}[language=P4]
+  action ipv4_forward(macAddr_t dstAddr, egSpec_t port) {
+    standard_metadata.egress_spec = port;
+    hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+    hdr.ethernet.dstAddr = dstAddr;
+    hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+  }    
+  table ipv4_lpm {
+    key = {  hdr.ipv4.dstAddr: lpm;  }
+    actions = {
+      ipv4_forward;
+      drop;
+      NoAction;}
+    ... }   
+}
+
+//Deparser
+control MyDeparser(packet_out packet, in headers hdr) {
+  apply {
+    packet.emit(hdr.ethernet);
+    packet.emit(hdr.ipv4);}
+}
+\end{lstlisting}\\
+\hline
+\end{tabular}
+\caption{P4 example}
+  \label{code:P4}
+\end{figure*}
+
 	
 \end{document}
 \endinput
