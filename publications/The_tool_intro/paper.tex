@@ -95,9 +95,18 @@ devices (e.g. switches, routers) in a protocol and target independent way.
 	% p4-re vannak elemzések kéne fejlesztés segítő eszköz
 	% ehhez egységes keretrendszer - vannak már ilyesmik related workben
 	
+
+
+\clearpage
+
 	\section{Analysis framework}
 
 
+Traditional compilers are designed around passess: the frontend passes parse source code into an intermediate representation (IR), midend passes transforms and adds new information to the IR, and the backend passes create target-specific object code from the IR~\cite{trad-compilers}.  
+Modular compilers like P4C improve this design by structuring the passess into a library: backends assemble their own frontends and midends from a catalogue of passes provided by the compiler. Moreover, P4C allows getting information from older states of the IR, as each transformation passes return an immutable IR instance.
+Even here, the three-fold separation of frontend-midend-backend have to remain: in order satisfy midend-dependencies, and subsequently, backend-dependencies, the backend must sequentially execute the frontend, the midend, and finally its own passes. 
+
+One goal of the experiment we present here is to relax the three-fold structure and allow passes to reuse (depend on) each other's functionally arbitrarily, and without burdening the compiler programmer with manually finding the right sequence in which to execute these dependencies.
 
 	\subsection{Representation - Architecture} % 4 hasáb - Dániel
 	% belső gráf, a koncepció
@@ -109,26 +118,34 @@ devices (e.g. switches, routers) in a protocol and target independent way.
     \caption{TODO}\label{fig:arch-top}
   \end{figure}
 
-  \begin{itemize}
-    \item Figure \ref{fig:arch-top} 
-    \item User extracts information (including metrics, object codes, verified properties) from the code using applications (corresp. backends). Applications provide services by utilizing the code knowledge stored in the knowledge graph by the analysers of the infrastructure layer (corresp. frontend). The collaboration of the application and the analysers is orchestrated by a controller module.
-  \end{itemize}
-	
-	\subsection{Experts} % 1 hasáb - Dániel
-	% kisebb gráf ábra
+Besides proposing a more relaxed structure of analysis passes, we had three additional goals in sight: support for different applications through uniform APIs, ease of extensibility, and data-driven programming.
+
+By \textit{supporting different applications} (or backends, in compiler parlance), we mean providing a comfortable way to to implement different end-users services, by reusing the same static code analysis operations.
+See Section~\ref{fig:apps} for a few examples of applications built on top of the <NAME>.
+In systems with uniform APIs, programmers have to learn only one paradigm to maintain, extend or otherwise alter the system (e.g. in case of P4C, visitors and passes are the main concepts of such a uniform API). 
+
+Figure~\ref{fig:arch-top} depicts how the architecture of <NAME> realizes uniform APIs by relying on a graph database. 
+Superficially, applications provide services to the user, by using the services provided by the infrastructurei (see Section~\ref{fig:infra}). In reality, both the infrastructure and applications operate on a large shared graph that collects all our knowledge about the program code. The graph is also exposed to the user to enable custom features (e.g. to attach external loggers, visualizers, and validators). The information in the knowledge graph is accessed using graph queries written in Gremlin (see Section \ref{sec:gremlin}). The impliciation is that each of users, application developers, and infrastructure developers are using one, uniform data structure, and are accessing it using the same mechanism. The seamless collaboration of all these components is managed by the controller component.
 
   \begin{figure}
     \includegraphics[width=0.3\textwidth]{figures/arch-deps.pdf}
     \caption{TODO}\label{fig:arch-deps}
   \end{figure}
 
-  \begin{itemize}
-    \item Figure \ref{fig:arch-deps} 
-    \item More granular.
-    \item Analysers depend on each other. Applications only depend on one or more analysers.
-    \item Controller manages dependencies.
-  \end{itemize}
+Our second design goal, \textit{ease of extensibility} is illustrated by Figure~\ref{fig:arch-deps}, that elaborates the application and infrastructure layers. 
+This arrangement was inspired by declarative build systems and the blackboard pattern used in distributed MI.
+
+The infrastructure consists of a set of interdependent analyser componenents (or passes, in compiler parlance): higher-level analysers can only be executed when lower-level analysers already inserted the necessary knowledge into the graph. To achieve this, analyser components register their needs and provided services to the controller component, and the controller figures out the topological order in which to initiate the analysers. 
+Applications provide a user interface (e.g. command line interface) through which their services can be accessed, and similarly to analysers, applications also depend on a subset of the analysers in the infrastructure. But unlike analysers, application are expected to only read (never modify) the graph, and consequently, applications have no dependers. 
+In this arrangement, the controller guarantees that when the user executes a work-intensive application, only the minimally necessary components will be performed.
+Moreover, when developers introduce new features, this arrangement enables them to think declaratively: instead of thinking about where to insert their feature inside a sequence of operations, they only have to think about their dependencies, i. e. what kind of analysers could help them.
+
+With this, we arrive to our third design goal, \textit{data-driven programming}. Thanks to the uniform graph API and the controller-managed dependecy resolution, programmers are forced to think in terms of data instead of code: they have to look at what code knowledge is in the graph already, figure out what data they want to insert, and possibly find existing analysers that makes writing queries  easier for them. 
+The information in the graph is regulated by a well-defined graph schema, and the graph topology is regulated by the well-defined requirements and services of the analysers. Moreover, since the graph instance is detached from the code analysis framework, the programmers can access it by external tools for visualizing, monitoring and validating purposes.
+Like this, programmers can almost completely avoid understanding the existing code base, and only have to look at and interact with the data in the graph.  
 	
+	\subsection{Experts} % 1 hasáb - Dániel
+	% kisebb gráf ábra
 
 	\subsection{Testing} % 1 hasáb - Gabi
 	% külön modul
