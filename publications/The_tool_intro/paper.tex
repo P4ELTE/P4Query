@@ -148,6 +148,19 @@ Like this, programmers can almost completely avoid understanding the existing co
 	% kisebb gráf ábra
 
 	\subsection{Testing} % 1 hasáb - Gabi
+	There are two main goals with the testing: to test if the analyzes work well; and because it is a quite new tool, it will go through a lot of changes, therefore the possible spoils of the analyses during changes need to be detected. This version of the tool contains unit tests and integration tests to check the functional correctness. 
+	
+	With the unit tests, our main goal is to check if the analyzes work well. Unit tests need to be fast, therefore they work with the smallest part of the analyses ie. their functions. One function usually define one query of the graph, which insert new edges into it, therefore in these cases, the tests check if the right edges are added to the graph. Using actual P4 source, to test these functions, would be too costly, therefore we define the most simple graphs --, which contains only those edges and vertices, which are necessary for the query -- to check the function.
+	
+	While unit tests need to be fast, integration tests can be slower, so we can use P4 files as the inputs to test the analyzes. When one analysis needs to be tested, it uses the P4 file, and executes every analysis, that it is based on and the tests will check the result of this running. The tests are predefined, therefore we use a file to store the information of the tested sources and analysis -- which file tests which analyzes with which test classes.
+	
+	There are two approaches to run these tests. One of them executes all of the defined tests -- i.e. it goes through all of the P4 sources and executes the necessary analyzes and tests the their results -- which is useful to test the whole program and identify regression errors. The other focuses only one analysis and it is useful, when someone actually develop that analysis. This approach run only those tests which are relevant for the analysis.
+	
+	The architecture gives opportunity to insert the test as an application, which depends on all of the tested analyzes, but these are built into the maven. (TODO - ide még jöhetne talán részletessebben)
+	
+	% külön modul
+	% elvi részei jelenlenek meg
+	% ilyen olyan teszt, messziről melyik hogy
 	% külön modul
 	% elvi részei jelenlenek meg
 	% ilyen olyan teszt, messziről melyik hogy
