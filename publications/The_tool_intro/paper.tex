@@ -15,7 +15,17 @@
   morekeywords={typedef, header, extern, struct, parser, state, transition, in, out, inout, select, default, control, action, table, apply, if, switch}
 }
 
-
+\lstdefinelanguage{asm}{
+  showlines=true,
+  morecomment=[l]{//},
+  keepspaces=true,
+  basicstyle=\scriptsize\ttfamily,
+  emphstyle=\itshape,
+  emph={},
+  commentstyle=\color{red},
+  keywordstyle=\color{blue},
+  morekeywords={load, const, invoke, ifeq, pop, add, return, code, data}
+}
 
 \AtBeginDocument{%
 	\providecommand\BibTeX{{%
@@ -101,14 +111,15 @@ devices (e.g. switches, routers) in a protocol and target independent way. Figur
 	% ehhez egységes keretrendszer - vannak már ilyesmik related workben
 	
 
+  %% p4c is a factory. this tool is a laboratory. 
 
 \clearpage
 
 	\section{Analysis framework}
 
 
-Traditional compilers are designed around passess: the frontend passes parse source code into an intermediate representation (IR), midend passes transforms and adds new information to the IR, and the backend passes create target-specific object code from the IR~\cite{trad-compilers}.  
-Modular compilers like P4C improve this design by structuring the passess into a library: backends assemble their own frontends and midends from a catalogue of passes provided by the compiler. Moreover, P4C allows getting information from older states of the IR, as each transformation passes return an immutable IR instance.
+Traditional compilers are designed around passes: the frontend passes parse source code into an intermediate representation (IR), midend passes transforms and adds new information to the IR, and the backend passes create target-specific object code from the IR~\cite{trad-compilers}.  
+Modular compilers like P4C improve this design by structuring the passes into a library: backends assemble their own frontends and midends from a catalogue of passes provided by the compiler. Moreover, P4C allows getting information from older states of the IR, as each transformation passes return an immutable IR instance.
 Even here, the three-fold separation of frontend-midend-backend have to remain: in order satisfy midend-dependencies, and subsequently, backend-dependencies, the backend must sequentially execute the frontend, the midend, and finally its own passes. 
 
 One goal of the experiment we present here is to relax the three-fold structure and allow passes to reuse (depend on) each other's functionally arbitrarily, and without burdening the compiler programmer with manually finding the right sequence in which to execute these dependencies.
@@ -130,7 +141,7 @@ See Section~\ref{fig:apps} for a few examples of applications built on top of th
 In systems with uniform APIs, programmers have to learn only one paradigm to maintain, extend or otherwise alter the system (e.g. in case of P4C, visitors and passes are the main concepts of such a uniform API). 
 
 Figure~\ref{fig:arch-top} depicts how the architecture of <NAME> realizes uniform APIs by relying on a graph database. 
-Superficially, applications provide services to the user, by using the services provided by the infrastructurei (see Section~\ref{fig:infra}). In reality, both the infrastructure and applications operate on a large shared graph that collects all our knowledge about the program code. The graph is also exposed to the user to enable custom features (e.g. to attach external loggers, visualizers, and validators). The information in the knowledge graph is accessed using graph queries written in Gremlin (see Section \ref{sec:gremlin}). The impliciation is that each of users, application developers, and infrastructure developers are using one, uniform data structure, and are accessing it using the same mechanism. The seamless collaboration of all these components is managed by the controller component.
+Superficially, applications provide services to the user, by using the services provided by the infrastructure (see Section~\ref{fig:infra}). In reality, both the infrastructure and applications operate on a large shared graph that collects all our knowledge about the program code. The graph is also exposed to the user to enable custom features (e.g. to attach external loggers, visualizers, and validators). The information in the knowledge graph is accessed using graph queries written in Gremlin (see Section \ref{sec:gremlin}). The implication is that each of users, application developers, and infrastructure developers are using one, uniform data structure, and are accessing it using the same mechanism. The seamless collaboration of all these components is managed by the controller component.
 
   \begin{figure}
     \includegraphics[width=0.3\textwidth]{figures/arch-deps.pdf}
@@ -140,12 +151,12 @@ Superficially, applications provide services to the user, by using the services 
 Our second design goal, \textit{ease of extensibility} is illustrated by Figure~\ref{fig:arch-deps}, that elaborates the application and infrastructure layers. 
 This arrangement was inspired by declarative build systems and the blackboard pattern used in distributed MI.
 
-The infrastructure consists of a set of interdependent analyser componenents (or passes, in compiler parlance): higher-level analysers can only be executed when lower-level analysers already inserted the necessary knowledge into the graph. To achieve this, analyser components register their needs and provided services to the controller component, and the controller figures out the topological order in which to initiate the analysers. 
-Applications provide a user interface (e.g. command line interface) through which their services can be accessed, and similarly to analysers, applications also depend on a subset of the analysers in the infrastructure. But unlike analysers, application are expected to only read (never modify) the graph, and consequently, applications have no dependers. 
+The infrastructure consists of a set of interdependent analyser components (or passes, in compiler parlance): higher-level analysers can only be executed when lower-level analysers already inserted the necessary knowledge into the graph. To achieve this, analyser components register their needs and provided services to the controller component, and the controller figures out the topological order in which to initiate the analysers. 
+Applications provide a user interface (e.g. command line interface) through which their services can be accessed, and similarly to analysers, applications also depend on a subset of the analysers in the infrastructure. But unlike analysers, application are expected to only read (never modify) the graph, and consequently, applications have no dependents. 
 In this arrangement, the controller guarantees that when the user executes a work-intensive application, only the minimally necessary components will be performed.
-Moreover, when developers introduce new features, this arrangement enables them to think declaratively: instead of thinking about where to insert their feature inside a sequence of operations, they only have to think about their dependencies, i. e. what kind of analysers could help them.
+Moreover, when developers introduce new features, this arrangement enables them to think declaratively: instead of thinking about where to insert their feature inside a sequence of operations, they only have to think about their dependencies, i.e. what kind of analysers could help them.
 
-With this, we arrive to our third design goal, \textit{data-driven programming}. Thanks to the uniform graph API and the controller-managed dependecy resolution, programmers are forced to think in terms of data instead of code: they have to look at what code knowledge is in the graph already, figure out what data they want to insert, and possibly find existing analysers that makes writing queries  easier for them. 
+With this, we arrive to our third design goal, \textit{data-driven programming}. Thanks to the uniform graph API and the controller-managed dependency resolution, programmers are forced to think in terms of data instead of code: they have to look at what code knowledge is in the graph already, figure out what data they want to insert, and possibly find existing analysers that makes writing queries  easier for them. 
 The information in the graph is regulated by a well-defined graph schema, and the graph topology is regulated by the well-defined requirements and services of the analysers. Moreover, since the graph instance is detached from the code analysis framework, the programmers can access it by external tools for visualizing, monitoring and validating purposes.
 Like this, programmers can almost completely avoid understanding the existing code base, and only have to look at and interact with the data in the graph.  
 	
@@ -171,7 +182,7 @@ Like this, programmers can almost completely avoid understanding the existing co
 	% elvi részei jelenlenek meg
 	% ilyen olyan teszt, messziről melyik hogy
 	
-	\section{Evaluation}
+  \section{Evaluation} % ~ case studies?
 	
 	% scalability measurements  talán 1 hasáb
 	% esetleg 1-2 plre hogy futott le - sor alapján? mini mérés
@@ -180,8 +191,53 @@ Like this, programmers can almost completely avoid understanding the existing co
 	% egyedi elemzések mérése
 	\subsection{Visualization} % 0.5 hasáb
 	\subsection{Verification} % 1 hasáb - Gabi
-	\subsection{Cost analysis} % 1 hasáb - Dániel
-	
+
+  \clearpage
+  \subsection{Compiler} % 1 hasáb - Dániel
+  In related research~\cite{cscs18,ocs20}, we work on a static cost analysis tool for P4: the tool expects as input a P4 program source code together with execution environment parameters, and outputs various metrics (e.g. execution time, energy efficiency) without actually running the P4 program.
+
+  In the current paper, we will not go into details on how the cost analysis tool calculates these metrics, but the principle is that we decompose the P4 program into primitive instructions whose expected cost is constant and already known. Implementations of P4 externals such as extern calls and lookup tables (e.g. \texttt{packet.extract} and \texttt{ipv4\_lpm} and in Figure~\ref{code:P4}) can also be passed to the tool in the form of these primitive instructions with known costs. 
+
+  From this, it follows that part of the static cost analysis problem reduces to a compilation-and-linking problem. As an experiment, we implemented a compiler to solve this problem as an application in <NAME>. The main reason we chose <NAME>, instead of the much more mature P4C compiler framework was that at first we did not know what kind of representation or code we will need to output: the control and extensibility provided by <NAME> and Gremlin queries gave us tools to experiment and create quick, recyclable prototypes to help us arrive at a final vision. While P4C's safety mechanisms (e.g. C++ static type system) support developing stable software, in case of prototyping and experimentation these same mechanisms are unused, or possibly even slowing down development.
+
+  Our current target representation for cost analysis is a sequential stack machine with an instruction set similar to JVM bytecode. Figure~\ref{code:stack} depicts the compiler output of \texttt{MyIngress} in Figure~\ref{code:P4}. In the figure all values (bits and sizes) are represented as integers (a requirement by our cost analysis approach). Both \texttt{isValid} and \texttt{ipv4\_lpm} have external implementation that had to be linked with the calls. While most P4 targets will not support stack machines, we chose this representation as it is relatively easy to generate, and relatively straightforward to implement. We also believe that as long as we do not count the cost of maintaining the stack, we can still make good cost estimations.
+  
+  The compiler is built on the control flow analyser in <NAME>: we traverse the CFG, and process each node by traversing the syntax tree under the node. We also use the call graph to find which label to jump to when a function is called. Thus, much of the compiler state can be delegated to the persistent knowledge graph, and only very specific data (e.g. instruction labels) and linking requires program state outside the graph.  
+
+  \begin{figure}
+  \begin{lstlisting}[language=asm]
+data:
+  ...
+  headers = 149 
+  headers.ethernet = 149   // size 114
+  ...
+  headers.ipv4 = 263 
+  headers.ipv4.valid = 263 
+  headers.ipv4.size = 264 
+  headers.ipv4.srcAddr = 265 
+  headers.ipv4.dstAddr = 297
+  ...
+code:
+  ...
+  // call isValid(hdr.ipv4) on line 144
+  214:  load 0	      // 0: local address of hdr
+  215:  const 114     // 114: size of hdr.ethernet
+  216:  add           // address of hdr.ipv4
+  217:  invoke 144 1		 
+  // test isValid return value
+  218:  ifeq 224		 
+  // call ipv4_lpm(hdr) on line 38
+  219:  load 0        // 0: local address of hdr
+  222:  invoke 38 1		 
+  223:  pop
+  // terminate with status OK
+  224:  const 0		 
+  225:  return 
+\end{lstlisting}
+\caption{Stack machine code of \texttt{MyIngress}}
+  \label{code:stack}
+\end{figure}
+  
 	\section{Conclusion and Future Work} % 1 hasáb - Máté
 
 \begin{figure*}
@@ -224,7 +280,7 @@ parser MyParser(...) {
     transition accept; } }
     
 // Control    
-control MyIngress(...) {
+control MyIngress(in headers hdr, ...) {
   apply {
     if (hdr.ipv4.isValid()) {
            ipv4_lpm.apply(); }
