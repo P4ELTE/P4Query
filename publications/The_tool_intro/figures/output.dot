@@ -1,0 +1,33 @@
+digraph {
+  graph [];
+  margin=0;
+  nodesep=1.5;
+  node [shape = record, style=rounded, fontname = "STIXGeneral"];
+  edge [ fontname = "STIXGeneral"];
+
+  control [label="{ class = ControlDecl | line = }"];
+  controlName [label="{ class = Term | line = | val = MyIngress}"];
+  block [label="{ class = BlockStmt | line = }"];
+  cond [label="{ class = CondStmt | line = }"];
+  expr [label="{ class = Expr | line = }"];
+  block2 [label="{ class = BlockStmt | line = }"];
+  app [label="{ class = DirectApp | line = }"];
+  table [label="{ class = TableDecl | line = }"];
+  tabName [label="{ class = Term | line = | val = ipv4_lpm}"];
+  act1 [label="{ class = ActionDecl | line = }"];
+  act2 [label="{ class = ActionDecl | line = }"];
+
+  control -> controlName [label="dom=SYMBOL\lrole=declares"];
+  control -> block [label="dom=CFG\lrole=entry"];
+  control -> table [label="dom=CALL\lrole=calls"];
+  block -> cond [label="dom=CFG\lrole=flow"];
+  cond -> block2 [label="dom=CFG\lrole=true-flow"];
+  cond -> expr [label="dom=AST\lrole=head"];
+  block2 -> app [label="dom=CFG\lrole=flow"];
+  block2 -> control [label="dom=CFG\lrole=return"];
+  app -> table [label="dom=SITES\lrole=calls"];
+  table -> tabName [label="dom=SYMBOL\lrole=declares"];
+  table -> act1 [label="dom=CALL\lrole=calls"];
+  table -> act2 [label="dom=CALL\lrole=calls"];
+
+}

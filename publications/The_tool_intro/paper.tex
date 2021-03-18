@@ -129,6 +129,7 @@ One goal of the experiment we present here is to relax the three-fold structure 
 	% elemzések
 	% app megvalósítás
 
+
   \begin{figure}
     \includegraphics[width=0.18\textwidth]{figures/arch-top.pdf}
     \caption{TODO}\label{fig:arch-top}
@@ -162,6 +163,17 @@ Like this, programmers can almost completely avoid understanding the existing co
 	
 	\subsection{Experts} % 1 hasáb - Dániel
 	% kisebb gráf ábra
+  As we see earlier in Figure~\ref{fig:arch-deps}, the heavy-lifting in <NAME> is done by various code analyser components, each adding new information about the P4 code to the knowledge graph using what is already there. We now introduce a few analyser modules using an example: Figure~\ref{fig:output} depicts a small subset of the knowledge graph taken after we executed control flow analysis, call analysis, and call sites analysis on the P4 code in Figure~\ref{code:P4} (specifically the \texttt{MyIngress} control). 
+  First, the contoller finds the topological order of their dependencies, and then starts executing them in order. In this case, the first dependency executed is the parser, parsing the P4 code and filling the knowledge graph with the syntax tree nodes and edges. 
+
+  Each analyser components adds new edges as an overlay graph. These overlays (domains) are separated by the \texttt{dom} edge-attributes: for example \texttt{CFG} is the domain introduced by the control flow analysis, and \texttt{CALL} is the domain of the call analysis, \texttt{SITES} is that of call site analysis. The \texttt{role} edge-attribute describes edge semantics inside their domain. For example, \texttt{calls} in \texttt{CALL} links a procedure to those procedures that it calls (e.g. \texttt{MyIngress} control calling \texttt{ipv4\_lpm} table lookup). On the other hand, \texttt{calls} in \texttt{SITES} links call statements (the \textit{direct application} of table \texttt{ipv4\_lpm}) to the called procedure (table \texttt{ipv4\_lpm}). 
+  
+  At the same time, the \texttt{CFG} domain contains \texttt{flow}, \texttt{entry}, and \texttt{return} edges (among others) to denote the flow of control between various nodes of the syntax tree, and to identify entry and exit nodes. For example, by following these edges, you can see how control flows from the \texttt{MyIngress} entry point through the conditional, terminating on the call of \texttt{ipv4\_lpm}. (For more information on how we implemented control flow analysis using Gremlin, see~\cite{ocs20}.) The figure also partially includes domains of other analysers, such as \texttt{SYMBOL}. This analysers creates the graph-equivalent of a symbol table by identifying which declaration declares which name, and links usages of this name in the scope of the declaration to the declaration.
+
+  \begin{figure}
+    \includegraphics[width=0.45\textwidth]{figures/output.pdf}
+    \caption{TODO}\label{fig:output}
+  \end{figure}
 
 	\subsection{Testing} % 1 hasáb - Gabi
 	There are two main goals with the testing: to test if the analyzes work well; and because it is a quite new tool, it will go through a lot of changes, therefore the possible spoils of the analyses during changes need to be detected. This version of the tool contains unit tests and integration tests to check the functional correctness. 
@@ -190,9 +202,19 @@ Like this, programmers can almost completely avoid understanding the existing co
 	% indítási információk - mindegyiknél /visualisation-nél
 	% egyedi elemzések mérése
 	\subsection{Visualization} % 0.5 hasáb
+  
+  Since its function is the easiest to understand, the first application we introduce is graph visualiation. This application expects a list of analyser component names, executes them, and then, prints a subgraph of the knowledge graph containing only the domains of the analysers in the list. For example, to print the full version of the graph in Figure~\ref{fig:output}, we should run the following command:
+
+  \begin{lstlisting}[language=bash, basicstyle=\scriptsize]
+  $ <NAME> draw -A ControlFlow SymbolTable CallGraph CallSites AST
+\end{lstlisting}
+
+The subcommand \texttt{draw} tells <NAME> to run the visualizer, while \texttt{-A} is a flag (defined by the visualizer UI) expects the analyser names that will be passed to the visulalizer application. 
+
+A possibly interesting implementation detail here is that the visualizer technically depends on \textit{all} the analysers defined in <NAME>, since it must be able to visualize anything the user may pass. Yet, we still managed to avoid executing those that are not requested by user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initializion of the dependencies. This way we can filter the analysers and only initialize those that were requested by the user.
+
 	\subsection{Verification} % 1 hasáb - Gabi
 
-  \clearpage
   \subsection{Compiler} % 1 hasáb - Dániel
   In related research~\cite{cscs18,ocs20}, we work on a static cost analysis tool for P4: the tool expects as input a P4 program source code together with execution environment parameters, and outputs various metrics (e.g. execution time, energy efficiency) without actually running the P4 program.
 
