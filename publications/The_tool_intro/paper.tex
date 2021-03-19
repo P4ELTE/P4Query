@@ -27,6 +27,18 @@
   morekeywords={load, const, invoke, ifeq, pop, add, return, code, data}
 }
 
+\lstdefinelanguage{cond}{
+	showlines=true,
+	morecomment=[l]{//},
+	keepspaces=true,
+	basicstyle=\scriptsize\ttfamily,
+	emphstyle=\itshape,
+	emph={},
+	commentstyle=\color{red},
+	keywordstyle=\color{blue},
+	morekeywords={Pre, Post, valid, invalid}
+}
+
 \AtBeginDocument{%
 	\providecommand\BibTeX{{%
 			\normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
@@ -103,6 +115,22 @@ devices (e.g. switches, routers) in a protocol and target independent way. Figur
 	% felhasznált eszközök  - 
 	% egyéb toolok - Vera,  - Gabi
 	% Akár gremlin/gráf alapú dolgok, ami nem p4 (akár refactorerl) - mindenki
+	
+	\subsection{Used tools}
+	
+	\subsection{Similar tools}	
+	
+	%verification
+	
+	Our solution is a general tool which contains several analyzes.	There are different analysis specific tools, which concentrate the error checking of P4 programs.
+	  
+	Some of them are created for the first main version of the P4 - the P4$_\text{14}$. For example Assert-P4 \cite{Assert-P4} and Vera \cite{Vera} ask annotated P4 source from the developer and with symbolic execution they check if the predefined properties are correct during the program, although Vera can also detect common errors without annotations. P4V \cite{P4V} creates a formula, which describe the proper behavior of the program and checks the satisfiability of it with SMT solver.
+	
+	There are other tools, which can analyze P4$_\text{16}$ programs too. BF4 \cite{bf4} is created as a p4c backend, which can not only detect error possibilities, but it is able to repair them by adding new keys to the table and modify the table contents.
+	
+	
+	
+	
 	
 
 	\section{Motivation}
@@ -209,12 +237,61 @@ Like this, programmers can almost completely avoid understanding the existing co
   $ <NAME> draw -A ControlFlow SymbolTable CallGraph CallSites AST
 \end{lstlisting}
 
-The subcommand \texttt{draw} tells <NAME> to run the visualizer, while \texttt{-A} is a flag (defined by the visualizer UI) expects the analyser names that will be passed to the visulalizer application. 
+  The subcommand \texttt{draw} tells <NAME> to run the visualizer, while \texttt{-A} is a flag (defined by the visualizer UI) expects the analyser names that will be passed to the visulalizer application. 
 
-A possibly interesting implementation detail here is that the visualizer technically depends on \textit{all} the analysers defined in <NAME>, since it must be able to visualize anything the user may pass. Yet, we still managed to avoid executing those that are not requested by user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initializion of the dependencies. This way we can filter the analysers and only initialize those that were requested by the user.
+  A possibly interesting implementation detail here is that the visualizer technically depends on \textit{all} the analysers defined in <NAME>, since it must be able to visualize anything the user may pass. Yet, we still managed to avoid executing those that are not requested by user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initializion of the dependencies. This way we can filter the analysers and only initialize those that were requested by the user.
 
-	\subsection{Verification} % 1 hasáb - Gabi
-
+  \subsection{Verification} % 1 hasáb - Gabi
+  Verification is a possible extension of the tool, which is added to it as an application. The main focus is to detect errors and suspicious cases, which can be caused by the usage of invalid header or uninitialized fields. The goal of this detection is to report these usages for the developer to avoid undefined behaviour in the programs. 
+  
+  There are different approaches for the verification of the P4 programs. There are tools, which uses symbolic execution \cite{vera}, or SMT solver \cite{p4v, bf4}. The reason we insert the verification into this tool is that we would like to create a universal framework to help the P4 developers in their work and have an assistant analysis, which helps in error detection. 
+  
+  The approach of the checking is defined in our previous paper \cite{cscs2020}, but shortly, it calculates the pre-and post-condition of the different blocks -- i.e the control apply functions, the tables and actions --, the parser and the deparser of the program and based on their results it can detect improper usage of the fields and headers. Three types of cases can be detected: when there are some error cases in a block; when there is any inconsistency between the blocks; and when the need of the parser-deparser is inconsistent with the need of the control function.
+  
+  In Figure \ref{code:cond}, there is an example condition for the MyIngress. We can see 4 pairs of conditions, because it has 4 possible execution paths - there are three when the condition is true, and the table executes one of the possible actions i.e. $\mathit{ipv4\_forward}$, $\mathit{drop}$ or $\mathit{NoAction}$, and one when the condition is false.
+  
+  \begin{figure}
+  	\begin{lstlisting}[language=cond]
+  	MyIngress:
+  	[
+  	// true condition and ipv4_forward
+  	  (Pre: 
+  	     valid:   [ipv4, ipv4.dstAddr, ipv4.ttl,
+  	               ethernet, ethernet.dstAddr],
+  	     invalid: [drop],
+  	   Post: 
+  	     valid:   [ipv4, ipv4.dstAddr, ipv4.ttl,
+  	               ethernet, ethernet.dstAddr],
+  	     invalid: [drop]),
+  	// true condition and drop
+  	  (Pre: 
+  	     valid:   [ipv4, ipv4.dstAddr],
+  	     invalid: [drop],
+  	   Post: 
+  	     valid:   [drop, ipv4, ipv4.dstAddr],
+  	     invalid: []),
+  	// true condition and NoAction
+  	  (Pre: 
+  	     valid:   [ipv4, ipv4.dstAddr],
+  	     invalid: [ipv4, ipv4.dstAddr, drop],
+  	   Post: 
+  	     valid:   [ipv4, ipv4.dstAddr],
+  	     invalid: [ipv4, ipv4.dstAddr, drop]),
+   	// false condition
+   	  (Pre: 
+   	     valid:   [ipv4, ipv4.dstAddr],
+   	     invalid: [ipv4, ipv4.dstAddr, drop],
+   	   Post: 
+   	     valid:   [ipv4, ipv4.dstAddr],
+   	     invalid: [ipv4, ipv4.dstAddr, drop]), 
+   	]
+  	\end{lstlisting}
+  	\caption{Conditions of \texttt{MyIngress}}
+  	\label{code:cond}
+  \end{figure}
+  
+  This calculation is built into the tool as an application, which uses the call-graph and the control-flow graph analyzes of the experts. The method can combine these two graphs, and while traversing them, it calculates the condition pair for the vertices of the call graph, while getting the information for it from the control flow graph. 
+  
   \subsection{Compiler} % 1 hasáb - Dániel
   In related research~\cite{cscs18,ocs20}, we work on a static cost analysis tool for P4: the tool expects as input a P4 program source code together with execution environment parameters, and outputs various metrics (e.g. execution time, energy efficiency) without actually running the P4 program.
 
