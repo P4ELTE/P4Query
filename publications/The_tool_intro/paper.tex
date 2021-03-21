@@ -117,7 +117,11 @@ devices (e.g. switches, routers) in a protocol and target independent way. Figur
 	% Akár gremlin/gráf alapú dolgok, ami nem p4 (akár refactorerl) - mindenki
 	
 	\subsection{Used tools}
-	
+
+  In the tool architecture described in Section~\ref{sec:rep}, we use a Gremlin graph database as storage backend (knowledge graph). Gremlin is a compositional query language and API that is implemented by many large-scale graph databases. This makes it possible to change graph implementations with almost no modification to the <NAME> code base at all. In earlier work~\cite{icai20}, we also profiled a few graph backends for control flow traverals. 
+  Another consequence is that analysers have to be implemented as graph query workflows. By coarsely granularizing queries, most of the work can be delegated to the database, and with this, the choice of the workflow language (e.g. Java) can become negligible. In earlier work~\cite{macs20}, we experimented with implementing a whole control flow analysis as a single graph query: while having advantages, it can also hinder code maintainability as queries are often more difficult to read and modify. 
+
+
 	\subsection{Similar tools}	
 	
 	%verification
@@ -130,8 +134,17 @@ devices (e.g. switches, routers) in a protocol and target independent way. Figur
 	
 	
 	
-	
-	
+  %graph-based
+  % - refactorerl
+  
+  %gremlin-based
+  % - An Efficient and Scalable Platform for Java Source Code Analysis Using Overlaid Graph Representations: https://core.ac.uk/download/pdf/323304005.pdf
+  % - Graph-based Vulnerability Detection via Extracting Features from Sliced Code: https://qrs20.techconf.org/QRSC2020_FULL/pdfs/QRS-C2020-4QOuHkY3M10ZUl1MoEzYvg/891500a038/891500a038.pdf
+  % - Application of Graph Databases for Static Code Analysis of Web-Applications: http://ceur-ws.org/Vol-2590/short30.pdf
+  % - Efficient and Flexible Discovery of PHP Application Vulnerabilities: https://fabs.codeminers.org/papers/2017b-eurosp.pdf
+  % -  Modeling and Discovering Vulnerabilities with Code Property Graphs: https://fabs.codeminers.org/papers/2014-ieeesp.pdf , slides: http://mlsec.org/joern/docs/2014-inbot.pdf
+  % - Reverse Engineering State and Strategy Design Patterns using Static Code Analysis: https://thesai.org/Downloads/Volume9No1/Paper_78-Reverse_Engineering_State_and_Strategy_Design_Patterns.pdf
+
 
 	\section{Motivation}
 	% max 1 hasáb - lehet intorba megy - Máté
@@ -147,12 +160,12 @@ devices (e.g. switches, routers) in a protocol and target independent way. Figur
 
 
 Traditional compilers are designed around passes: the frontend passes parse source code into an intermediate representation (IR), midend passes transforms and adds new information to the IR, and the backend passes create target-specific object code from the IR~\cite{trad-compilers}.  
-Modular compilers like P4C improve this design by structuring the passes into a library: backends assemble their own frontends and midends from a catalogue of passes provided by the compiler. Moreover, P4C allows getting information from older states of the IR, as each transformation passes return an immutable IR instance.
+Modular compilers like P4C improve this design by structuring the passes into a library: backends assemble their own frontends and midends from a catalogue of passes provided by the compiler. Moreover, P4C allows getting information from older states of the IR, as each transformation pass returns an immutable IR instance.
 Even here, the three-fold separation of frontend-midend-backend have to remain: in order satisfy midend-dependencies, and subsequently, backend-dependencies, the backend must sequentially execute the frontend, the midend, and finally its own passes. 
 
 One goal of the experiment we present here is to relax the three-fold structure and allow passes to reuse (depend on) each other's functionally arbitrarily, and without burdening the compiler programmer with manually finding the right sequence in which to execute these dependencies.
 
-	\subsection{Representation - Architecture} % 4 hasáb - Dániel
+\subsection{Representation - Architecture}\label{sec:rep} % 4 hasáb - Dániel
 	% belső gráf, a koncepció
 	% elemzések
 	% app megvalósítás
@@ -170,7 +183,7 @@ See Section~\ref{fig:apps} for a few examples of applications built on top of th
 In systems with uniform APIs, programmers have to learn only one paradigm to maintain, extend or otherwise alter the system (e.g. in case of P4C, visitors and passes are the main concepts of such a uniform API). 
 
 Figure~\ref{fig:arch-top} depicts how the architecture of <NAME> realizes uniform APIs by relying on a graph database. 
-Superficially, applications provide services to the user, by using the services provided by the infrastructure (see Section~\ref{fig:infra}). In reality, both the infrastructure and applications operate on a large shared graph that collects all our knowledge about the program code. The graph is also exposed to the user to enable custom features (e.g. to attach external loggers, visualizers, and validators). The information in the knowledge graph is accessed using graph queries written in Gremlin (see Section \ref{sec:gremlin}). The implication is that each of users, application developers, and infrastructure developers are using one, uniform data structure, and are accessing it using the same mechanism. The seamless collaboration of all these components is managed by the controller component.
+Superficially, applications provide services to the user, by using the services provided by the infrastructure (see Section~\ref{fig:infra}). In reality, both the infrastructure and applications operate on a large shared graph that collects all our knowledge about the program code. The graph is also exposed to the user to enable custom features (e.g. to attach external loggers, visualisers, and validators). The information in the knowledge graph is accessed using graph queries written in Gremlin (see Section \ref{sec:gremlin}). The implication is that users, application developers, and infrastructure developers are using one, uniform data structure, and are accessing it using the same mechanism. The seamless collaboration of all these components is managed by the controller component.
 
   \begin{figure}
     \includegraphics[width=0.3\textwidth]{figures/arch-deps.pdf}
@@ -186,17 +199,17 @@ In this arrangement, the controller guarantees that when the user executes a wor
 Moreover, when developers introduce new features, this arrangement enables them to think declaratively: instead of thinking about where to insert their feature inside a sequence of operations, they only have to think about their dependencies, i.e. what kind of analysers could help them.
 
 With this, we arrive to our third design goal, \textit{data-driven programming}. Thanks to the uniform graph API and the controller-managed dependency resolution, programmers are forced to think in terms of data instead of code: they have to look at what code knowledge is in the graph already, figure out what data they want to insert, and possibly find existing analysers that makes writing queries  easier for them. 
-The information in the graph is regulated by a well-defined graph schema, and the graph topology is regulated by the well-defined requirements and services of the analysers. Moreover, since the graph instance is detached from the code analysis framework, the programmers can access it by external tools for visualizing, monitoring and validating purposes.
+The information in the graph is regulated by a well-defined graph schema, and the graph topology is regulated by the well-defined requirements and services of the analysers. Moreover, since the graph instance is detached from the code analysis framework, the programmers can access it by external tools for visualising, monitoring and validating purposes.
 Like this, programmers can almost completely avoid understanding the existing code base, and only have to look at and interact with the data in the graph.  
 	
 	\subsection{Experts} % 1 hasáb - Dániel
 	% kisebb gráf ábra
   As we see earlier in Figure~\ref{fig:arch-deps}, the heavy-lifting in <NAME> is done by various code analyser components, each adding new information about the P4 code to the knowledge graph using what is already there. We now introduce a few analyser modules using an example: Figure~\ref{fig:output} depicts a small subset of the knowledge graph taken after we executed control flow analysis, call analysis, and call sites analysis on the P4 code in Figure~\ref{code:P4} (specifically the \texttt{MyIngress} control). 
-  First, the contoller finds the topological order of their dependencies, and then starts executing them in order. In this case, the first dependency executed is the parser, parsing the P4 code and filling the knowledge graph with the syntax tree nodes and edges. 
+  First, the controller finds the topological order of their dependencies, and then starts executing them in order. In this case, the first dependency executed is the parser, parsing the P4 code and filling the knowledge graph with the syntax tree nodes and edges. 
 
   Each analyser components adds new edges as an overlay graph. These overlays (domains) are separated by the \texttt{dom} edge-attributes: for example \texttt{CFG} is the domain introduced by the control flow analysis, and \texttt{CALL} is the domain of the call analysis, \texttt{SITES} is that of call site analysis. The \texttt{role} edge-attribute describes edge semantics inside their domain. For example, \texttt{calls} in \texttt{CALL} links a procedure to those procedures that it calls (e.g. \texttt{MyIngress} control calling \texttt{ipv4\_lpm} table lookup). On the other hand, \texttt{calls} in \texttt{SITES} links call statements (the \textit{direct application} of table \texttt{ipv4\_lpm}) to the called procedure (table \texttt{ipv4\_lpm}). 
   
-  At the same time, the \texttt{CFG} domain contains \texttt{flow}, \texttt{entry}, and \texttt{return} edges (among others) to denote the flow of control between various nodes of the syntax tree, and to identify entry and exit nodes. For example, by following these edges, you can see how control flows from the \texttt{MyIngress} entry point through the conditional, terminating on the call of \texttt{ipv4\_lpm}. (For more information on how we implemented control flow analysis using Gremlin, see~\cite{ocs20}.) The figure also partially includes domains of other analysers, such as \texttt{SYMBOL}. This analysers creates the graph-equivalent of a symbol table by identifying which declaration declares which name, and links usages of this name in the scope of the declaration to the declaration.
+  At the same time, the \texttt{CFG} domain contains \texttt{flow}, \texttt{entry}, and \texttt{return} edges (among others) to denote the flow of control between various nodes of the syntax tree, and to identify entry and exit nodes. For example, by following these edges, you can see how control flows from the \texttt{MyIngress} entry point through the conditional, terminating on the call of \texttt{ipv4\_lpm}. (For more information on how we implemented control flow analysis using Gremlin, see~\cite{macs20}.) The figure also partially includes domains of other analysers, such as \texttt{SYMBOL}. This analysers creates the graph-equivalent of a symbol table by identifying which declaration declares which name, and links usages of this name in the scope of the declaration to the declaration.
 
   \begin{figure}
     \includegraphics[width=0.45\textwidth]{figures/output.pdf}
@@ -229,17 +242,17 @@ Like this, programmers can almost completely avoid understanding the existing co
 	
 	% indítási információk - mindegyiknél /visualisation-nél
 	% egyedi elemzések mérése
-	\subsection{Visualization} % 0.5 hasáb
+	\subsection{Visualisation} % 0.5 hasáb
   
-  Since its function is the easiest to understand, the first application we introduce is graph visualiation. This application expects a list of analyser component names, executes them, and then, prints a subgraph of the knowledge graph containing only the domains of the analysers in the list. For example, to print the full version of the graph in Figure~\ref{fig:output}, we should run the following command:
+  Since its function is the easiest to understand, the first application we introduce is graph visualisation. This application expects a list of analyser component names, executes them, and then, prints a subgraph of the knowledge graph containing only the domains of the analysers in the list. For example, to print the full version of the graph in Figure~\ref{fig:output}, we should run the following command:
 
   \begin{lstlisting}[language=bash, basicstyle=\scriptsize]
   $ <NAME> draw -A ControlFlow SymbolTable CallGraph CallSites AST
 \end{lstlisting}
 
-  The subcommand \texttt{draw} tells <NAME> to run the visualizer, while \texttt{-A} is a flag (defined by the visualizer UI) expects the analyser names that will be passed to the visulalizer application. 
+  The subcommand \texttt{draw} tells <NAME> to run the visualiser, while \texttt{-A} is a flag (defined by the visualiser UI) expects the analyser names that will be passed to the visualiser application. 
 
-  A possibly interesting implementation detail here is that the visualizer technically depends on \textit{all} the analysers defined in <NAME>, since it must be able to visualize anything the user may pass. Yet, we still managed to avoid executing those that are not requested by user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initializion of the dependencies. This way we can filter the analysers and only initialize those that were requested by the user.
+  A possibly interesting implementation detail here is that the visualiser technically depends on \textit{all} the analysers defined in <NAME>, since it must be able to visualise anything the user may pass. Yet, we still managed to avoid executing those that are not requested by the user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initialization of the dependencies. This way we can filter the analysers and only initialize those that were requested by the user.
 
   \subsection{Verification} % 1 hasáb - Gabi
   Verification is a possible extension of the tool, which is added to it as an application. The main focus is to detect errors and suspicious cases, which can be caused by the usage of invalid header or uninitialized fields. The goal of this detection is to report these usages for the developer to avoid undefined behaviour in the programs. 
@@ -301,7 +314,7 @@ Like this, programmers can almost completely avoid understanding the existing co
 
   Our current target representation for cost analysis is a sequential stack machine with an instruction set similar to JVM bytecode. Figure~\ref{code:stack} depicts the compiler output of \texttt{MyIngress} in Figure~\ref{code:P4}. In the figure all values (bits and sizes) are represented as integers (a requirement by our cost analysis approach). Both \texttt{isValid} and \texttt{ipv4\_lpm} have external implementation that had to be linked with the calls. While most P4 targets will not support stack machines, we chose this representation as it is relatively easy to generate, and relatively straightforward to implement. We also believe that as long as we do not count the cost of maintaining the stack, we can still make good cost estimations.
   
-  The compiler is built on the control flow analyser in <NAME>: we traverse the CFG, and process each node by traversing the syntax tree under the node. We also use the call graph to find which label to jump to when a function is called. Thus, much of the compiler state can be delegated to the persistent knowledge graph, and only very specific data (e.g. instruction labels) and linking requires program state outside the graph.  
+  The compiler is built on top of the control flow analyser in <NAME>: we traverse the CFG, and process each node by traversing the syntax tree under the node. We also use the call graph to find which label to jump to when a function is called. Thus, much of the compiler state can be delegated to the persistent knowledge graph, and only very specific data (e.g. instruction labels) and linking requires program state outside the graph.  
 
   \begin{figure}
   \begin{lstlisting}[language=asm]
