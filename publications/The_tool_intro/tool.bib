@@ -46,7 +46,6 @@ publisher = {Association for Computing Machinery},
 address = {New York, NY, USA},
 url = {https://doi.org/10.1145/3185467.3185497},
 doi = {10.1145/3185467.3185497},
-abstract = {With the rise of programmable network switches, network infrastructure is becoming more flexible and more capable than ever before. Programming languages such as P4 lower the barrier for changing the inner workings of network switches and offer a uniform experience across different devices. However, this programmability also brings the risk of introducing hard-to-catch bugs at a level that was previously covered by well-tested devices with a fixed set of capabilities. Subtle discrepancies between different implementations pose a risk of introducing bugs at a layer that is opaque to the user.To reap the benefit of programmable hardware and keep---or improve upon---the reliability of traditional approaches, new tools are needed. In this work, we present p4pktgen, a tool for automatically generating test cases for P4 programs using symbolic execution. These test cases can be used to validate that P4 programs act as intended on a device.},
 booktitle = {Proceedings of the Symposium on SDN Research},
 articleno = {5},
 numpages = {7},
@@ -74,7 +73,6 @@ series = {SOSR '18}
 	address = {New York, NY, USA},
 	url = {https://doi.org/10.1145/3185467.3185499},
 	doi = {10.1145/3185467.3185499},
-	abstract = {Recent trends in software-defined networking have extended network programmability to the data plane through programming languages such as P4. Unfortunately, the chance of introducing bugs in the network also increases significantly in this new context. Existing data plane verification approaches are unable to model P4 programs, or they present severe restrictions in the set of properties that can be modeled. In this paper, we introduce a data plane program verification approach based on assertion checking and symbolic execution. Network programmers annotate P4 programs with assertions expressing general security and correctness properties. Once annotated, these programs are transformed into C-based models and all their possible paths are symbolically executed. Results show that the proposed approach, called ASSERT-P4, can uncover a broad range of bugs and software flaws. Furthermore, experimental evaluation shows that it takes less than a minute for verifying various P4 applications proposed in the literature.},
 	booktitle = {Proceedings of the Symposium on SDN Research},
 	articleno = {4},
 	numpages = {7},
@@ -154,7 +152,7 @@ series = {SOSR '18}
 @article{ownCheck, 
 	title={Component-based error detection of P4 programs}, journal={Acta Cybernetica}, author={Tóth, Gabriella and Tejfel, Máté}, year={2021}, month={}, pages={to appear} }
 
-  @ARTICLE{9064792,	
+  @article{java-static,	
 	author={O. {Rodriguez-Prieto} and A. {Mycroft} and F. {Ortin}},
 	journal={IEEE Access}, 	
 	title={An Efficient and Scalable Platform for Java Source Code Analysis Using Overlaid Graph Representations},
@@ -175,5 +173,82 @@ number = {1},
 volume = {11},
 year = {2021},
 pages = {70--79}
+}
+
+@INPROCEEDINGS{yamaguchi,
+
+  author={F. {Yamaguchi} and N. {Golde} and D. {Arp} and K. {Rieck}},
+
+  booktitle={2014 IEEE Symposium on Security and Privacy}, 
+
+  title={Modeling and Discovering Vulnerabilities with Code Property Graphs}, 
+
+  year={2014},
+
+  volume={},
+
+  number={},
+
+  pages={590-604},
+
+  doi={10.1109/SP.2014.44}}
+
+@article{cscs18,
+ title={{Keeping P4 Switches Fast and Fault-free through Automatic Verification}},
+ volume={24},
+ DOI={10.14232/actacyb.24.1.2019.6},
+ number={1},
+ journal={Acta Cybernetica},
+ author={Lukács, Dániel  and Pongrácz, Gergely and Tejfel, Máté},
+ year={2019},
+ month={May},
+ pages={61-81} 
+}
+
+@misc{p4c,
+  author = {The P4 Language Consortium},
+  title = {{P4C reference compiler for the P4$_\text{16}$ programming language}},
+  howpublished = {https://github.com/p4lang/p4c},
+  year = {2017}, 
+  note = "[Online; accessed 28-February-2020]"
+}
+
+@misc{p4c-basic,
+  author = {{P4 Language Consortium}},
+  title = {{basic\_routing-bmv2.p4, a small test case for the official P4 reference compiler, P4C}},
+  year  = {2018},
+  url   = {https://github.com/p4lang/p4c/blob/master/testdata/p4_16_samples/basic_routing-bmv2.p4},
+}
+
+@inproceedings{icai20,
+author = {Luk\'acs, D\'aniel  and Pongr\'acz, Gergely and Tejfel, M\'at\'e},
+title = {{Are Graph Databases Fast Enough for Static P4 Code Analysis?}},
+booktitle = {{Proceedings of the 11th International Conference on Applied Informatics 2020}},
+publisher = {CEUR Workshop Proceedings},
+pages = {213--223},
+year = {2020},
+isbn_issn = {ISSN 1613-0073},
+url = {{http://ceur-ws.org/Vol-2650/#paper22}},
+}
+
+@article{gremlin,
+   title={{The Gremlin graph traversal machine and language (invited talk)}},
+   ISBN={9781450339025},
+   url={http://dx.doi.org/10.1145/2815072.2815073},
+   DOI={10.1145/2815072.2815073},
+   journal={Proceedings of the 15th Symposium on Database Programming Languages - DBPL 2015},
+   publisher={ACM Press},
+   author={Rodriguez, Marko A.},
+   year={2015}
+}
+
+@inproceedings{referl,
+  title = {RefactorErl - Source Code Analysis and Refactoring in Erlang},
+  author = {Bozó, I. and Horpácsi, D. and Horváth, Z. and Kitlei, R. and Köszegi, J. and Tejfel. M. and Tóth, M},
+  booktitle = {Proceedings of the 12th Symposium on Programming Languages and Software Tools, ISBN 978-9949-23-178-2},
+  address = {Tallin, Estonia},
+  pages = {138--148},
+  year = {2011},
+  month = {October}
 }
 

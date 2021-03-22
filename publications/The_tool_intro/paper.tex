@@ -209,11 +209,6 @@ control MyDeparser(packet_out packet,
 	% egyéb toolok - Vera,  - Gabi
 	% Akár gremlin/gráf alapú dolgok, ami nem p4 (akár refactorerl) - mindenki
 	
-	\subsection{Used tools}
-
-  In the tool architecture described in Section~\ref{sec:rep}, we use a Gremlin graph database as storage backend (knowledge graph). Gremlin is a compositional query language and API that is implemented by many large-scale graph databases. This makes it possible to change graph implementations with almost no modification to the <NAME> code base at all. In earlier work~\cite{icai20}, we also profiled a few graph backends for control flow traverals. 
-  Another consequence is that analysers have to be implemented as graph query workflows. By coarsely granularizing queries, most of the work can be delegated to the database, and with this, the choice of the workflow language (e.g. Java) can become negligible. In earlier work~\cite{macs20}, we experimented with implementing a whole control flow analysis as a single graph query: while having advantages, it can also hinder code maintainability as queries are often more difficult to read and modify. 
-
 
 	\subsection{Similar tools}	
 	
@@ -223,11 +218,14 @@ control MyDeparser(packet_out packet,
 	
 	Some other tools uses analysis methods for different purposes. For example p4pktgen \cite{p4pktgen} uses symbolic execution for automatically generating test cases. Flightplan \cite{flightplan} can splits a P4 program into a set of cooperating P4 programs and maps them to run as a distributed system formed of several, possibly heterogeneous, dataplanes. During this process they use several analysis technics, for example to gather variables whose values must be transfer between dataplanes. 
 
-	Comparing these approches this paper presents a generic framework make possible to implement several analyses methods which can use each other's results as well. 
+	Comparing these approaches this paper presents a generic framework make possible to implement several analyses methods which can use each other's results as well. 
 	
-	The approach of the graph-based static analysis of programs is well-known. It is used wide ranged for example with Java \cite{9064792}, 
-	
-	
+
+  A major inspiration for this work was RefactorErl~\cite{referl}, a static analysis tool for Erlang. RefactorErl stores program information in a graph called the Semantic Program Graph using relation databases, and hosts in own query language for exploring the stored information. Many features in our work -- such as using graph databases and their built-in query languages instead of in-house solutions -- can be considered to be the streamlining of best practices found in RefactorErl.
+
+  Recently, other works also leveraged graph databases for static analysis purposes. ProgQuery \cite{java-static} is a similar static analysis tool for Java, built on Neo4j and its Cypher query language. The authors emphasize that using Neo4j yielded substantial improvements in analysis time and memory usage. 
+  
+  The expressive power of Gremlin is proved in another recent work~\cite{yamaguchi}: the authors store C code information in Neo4j, and define recurring vulnerability patterns as Gremlin queries. Using this apporach, the authors discovered 18 previously unknown vulnerabilities in the Linux kernel.
 	
   %graph-based
   % - refactorerl
@@ -260,8 +258,8 @@ The framework supports rapid implementation of new analysis methods applicable f
 	\section{Analysis framework}
 
 
-Traditional compilers are designed around passes: the frontend passes parse source code into an intermediate representation (IR), midend passes transforms and adds new information to the IR, and the backend passes create target-specific object code from the IR~\cite{trad-compilers}.  
-Modular compilers like P4C improve this design by structuring the passes into a library: backends assemble their own frontends and midends from a catalogue of passes provided by the compiler. Moreover, P4C allows getting information from older states of the IR, as each transformation pass returns an immutable IR instance.
+Traditional compilers are designed around passes: the frontend passes parse source code into an intermediate representation (IR), midend passes transforms and adds new information to the IR, and the backend passes create target-specific object code from the IR.  
+Modular compilers like P4C~\cite{p4c} improve this design by structuring the passes into a library: backends assemble their own frontends and midends from a catalogue of passes provided by the compiler. Moreover, P4C allows getting information from older states of the IR, as each transformation pass returns an immutable IR instance.
 Even here, the three-fold separation of frontend-midend-backend have to remain: in order satisfy midend-dependencies, and subsequently, backend-dependencies, the backend must sequentially execute the frontend, the midend, and finally its own passes. 
 
 One goal of the experiment we present here is to relax the three-fold structure and allow passes to reuse (depend on) each other's functionally arbitrarily, and without burdening the compiler programmer with manually finding the right sequence in which to execute these dependencies.
@@ -280,11 +278,11 @@ One goal of the experiment we present here is to relax the three-fold structure 
 Besides proposing a more relaxed structure of analysis passes, we had three additional goals in sight: support for different applications through uniform APIs, ease of extensibility, and data-driven programming.
 
 By \textit{supporting different applications} (or backends, in compiler parlance), we mean providing a comfortable way to to implement different end-users services, by reusing the same static code analysis operations.
-See Section~\ref{fig:apps} for a few examples of applications built on top of the <NAME>.
+See Section~\ref{sec:apps} for a few examples of applications built on top of the <NAME>.
 In systems with uniform APIs, programmers have to learn only one paradigm to maintain, extend or otherwise alter the system (e.g. in case of P4C, visitors and passes are the main concepts of such a uniform API). 
 
 Figure~\ref{fig:arch-top} depicts how the architecture of <NAME> realizes uniform APIs by relying on a graph database. 
-Superficially, applications provide services to the user, by using the services provided by the infrastructure (see Section~\ref{fig:infra}). In reality, both the infrastructure and applications operate on a large shared graph that collects all our knowledge about the program code. The graph is also exposed to the user to enable custom features (e.g. to attach external loggers, visualisers, and validators). The information in the knowledge graph is accessed using graph queries written in Gremlin (see Section \ref{sec:gremlin}). The implication is that users, application developers, and infrastructure developers are using one, uniform data structure, and are accessing it using the same mechanism. The seamless collaboration of all these components is managed by the controller component.
+Superficially, applications provide services to the user, by using the services provided by the infrastructure (see Section~\ref{sec:infra}). In reality, both the infrastructure and applications operate on a large shared graph that collects all our knowledge about the program code. The graph is also exposed to the user to enable custom features (e.g. to attach external loggers, visualisers, and validators). The information in the knowledge graph is accessed using graph queries written in Gremlin. The implication is that users, application developers, and infrastructure developers are using one, uniform data structure, and are accessing it using the same mechanism. The seamless collaboration of all these components is managed by the controller component.
 
   \begin{figure}
     \includegraphics[width=0.3\textwidth]{figures/arch-deps.pdf}
@@ -302,8 +300,14 @@ Moreover, when developers introduce new features, this arrangement enables them 
 With this, we arrive to our third design goal, \textit{data-driven programming}. Thanks to the uniform graph API and the controller-managed dependency resolution, programmers are forced to think in terms of data instead of code: they have to look at what code knowledge is in the graph already, figure out what data they want to insert, and possibly find existing analysers that makes writing queries  easier for them. 
 The information in the graph is regulated by a well-defined graph schema, and the graph topology is regulated by the well-defined requirements and services of the analysers. Moreover, since the graph instance is detached from the code analysis framework, the programmers can access it by external tools for visualising, monitoring and validating purposes.
 Like this, programmers can almost completely avoid understanding the existing code base, and only have to look at and interact with the data in the graph.  
+
+\paragraph{Gremlin API}
+In the tool architecture described in this section, we use a Gremlin graph database as storage backend (knowledge graph). Gremlin is a compositional query language and API that is implemented by many large-scale graph databases. This makes it possible to change graph implementations with almost no modification to the <NAME> code base. In earlier work~\cite{icai20}, we also profiled a few graph backends for control flow traverals, and verified that -- apart from the initial overhead -- in-memory graph databases have comparable performance to built-in memory manipulation. 
+
+  Another consequence is that analysers have to be implemented as graph query workflows. By coarsely granularizing queries, most of the work can be delegated to the database, and with this, the choice of the workflow language (e.g. Java) can become negligible. In earlier work~\cite{macs20}, we experimented with implementing a whole control flow analysis as a single graph query: while having advantages, it can also hinder code maintainability as queries are often more difficult to read and modify. 
+
 	
-	\subsection{Experts} % 1 hasáb - Dániel
+  \subsection{Infrastructure}\label{sec:infra} % 1 hasáb - Dániel
 	% kisebb gráf ábra
   As we see earlier in Figure~\ref{fig:arch-deps}, the heavy-lifting in <NAME> is done by various code analyser components, each adding new information about the P4 code to the knowledge graph using what is already there. We now introduce a few analyser modules using an example: Figure~\ref{fig:output} depicts a small subset of the knowledge graph taken after we executed control flow analysis, call analysis, and call sites analysis on the P4 code in Figure~\ref{code:P4} (specifically the \texttt{MyIngress} control). 
   First, the controller finds the topological order of their dependencies, and then starts executing them in order. In this case, the first dependency executed is the parser, parsing the P4 code and filling the knowledge graph with the syntax tree nodes and edges. 
@@ -336,20 +340,23 @@ Like this, programmers can almost completely avoid understanding the existing co
 	% elvi részei jelenlenek meg
 	% ilyen olyan teszt, messziről melyik hogy
 	
-  \section{Evaluation} % ~ case studies?
+  \section{Case studies}\label{sec:apps} % ~ case studies?
 	
 	% scalability measurements  talán 1 hasáb
 	% esetleg 1-2 plre hogy futott le - sor alapján? mini mérés
 	
 	% indítási információk - mindegyiknél /visualisation-nél
 	% egyedi elemzések mérése
+
+  In this section, we illustrate the viability of the platform by showcasing a few applications we are currently building on top of <NAME> in related research. 
+
 	\subsection{Visualisation} % 0.5 hasáb
   
-  Since its function is the easiest to understand, the first application we introduce is graph visualisation. This application expects a list of analyser component names, executes them, and then, prints a subgraph of the knowledge graph containing only the domains of the analysers in the list. For example, to print the full version of the graph in Figure~\ref{fig:output}, we should run the following command:
-  \begin{lstlisting}[language=bash, basicstyle=\scriptsize]
-  $ <NAME> draw -A ControlFlow SymbolTable CallGraph CallSites AST
+  Since it is the easiest to understand, the first application we introduce is graph visualisation. This application expects a list of analyser component names, executes them, and then, prints a subgraph of the knowledge graph containing only the domains of the analysers in the list. For example, to print the full version of the graph in Figure~\ref{fig:output}, we should execute <NAME> with the following arguments:
+  \begin{lstlisting}[language=bash, basicstyle=\footnotesize]
+$ <NAME> draw example.p4 -A CFG SYMBOL CALL SITES AST 
 \end{lstlisting}
-  The subcommand \texttt{draw} tells <NAME> to run the visualiser, while \texttt{-A} is a flag (defined by the visualiser UI) expects the analyser names that will be passed to the visualiser application. 
+The subcommand \texttt{draw} tells <NAME> to run the visualiser on the file \texttt{example.p4}, while \texttt{-A} is a flag (defined by the visualiser UI) expects the analyser names that will be passed to the visualiser application. 
 
   A possibly interesting implementation detail here is that the visualiser technically depends on \textit{all} the analysers defined in <NAME>, since it must be able to visualise anything the user may pass. Yet, we still managed to avoid executing those that are not requested by the user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initialization of the dependencies. This way we can filter the analysers and only initialize those that were requested by the user.
 
