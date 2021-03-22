@@ -1,6 +1,6 @@
 \documentclass[sigconf]{acmart}
 
-\usepackage{comment, graphicx, algorithm, algorithmic, listings}
+\usepackage{comment, graphicx, algorithm, algorithmic, listings, multicol}
 \usepackage[utf8]{inputenc}
 
 
@@ -108,7 +108,8 @@
 describing the data plane layer of packet processing algorithms of different network
 devices (e.g. switches, routers) in a protocol and target independent way. Figure~\ref{code:P4} illustrates a P4 program. The program first defines the applied header structure, than the parser part describes how the fields of the defined headers will be set from the input bit stream (input packet). Controller part can modify values of fields of headers and metadata by applying lookup tables. The data plane program describes the structure of the tables, the key fields based on that lookups will be executed and the possible results of the lookups, namely the applicable actions. However concrete data of the tables (which actions will be executed with which parameters for which key values) are defined by the control plane program, therefore it will not appear in P4. Finally the deparse part defines how the output bit stream (output packet) will be created from the headers.   
 	
-	The paper describes an analysis framework for P4. The framework makes possible development of different P4 related analysis methods in a generic and modular way. It uses an internal graph representation where the results of the methods are also represented as part of the graph (mainly by adding new edges to the graph). In this way the methods can use each other's results as well.  
+	The paper describes an analysis framework for P4. The framework makes possible development of different P4 related analysis methods in a generic and modular way. It uses an internal graph representation where the results of the methods are also represented as part of the graph (mainly by adding new edges to the graph). In this way the methods can use each other's results as well. The proposed tool makes also possible to create rapid, prototype implementation of different analysis concepts using a common toolset.  
+
 
 \begin{figure*}
 \begin{tabular}{|p{3.3cm}|p{5.9cm}|p{7.7cm}|}
@@ -189,10 +190,10 @@ control MyDeparser(packet_out packet, in headers hdr) {
   \label{code:P4}
 \end{figure*}
 
-
 	
 	
 	\section{Related Work}
+	\label{sec:related}
 	% kb 1.5 hasáb
 	% felhasznált eszközök  - 
 	% egyéb toolok - Vera,  - Gabi
@@ -212,9 +213,7 @@ control MyDeparser(packet_out packet, in headers hdr) {
 	
 	Some other tools uses analysis methods for different purposes. For example p4pktgen \cite{p4pktgen} uses symbolic execution for automatically generating test cases. Flightplan \cite{flightplan} can splits a P4 program into a set of cooperating P4 programs and maps them to run as a distributed system formed of several, possibly heterogeneous, dataplanes. During this process they use several analysis technics, for example to gather variables whose values must be transfer between dataplanes. 
 
-	 
-	
-	Our solution is a general tool which contains several analyzes.	
+	Comparing these approches this paper presents a generic framework make possible to implement several analyses methods which can use each other's results as well. 
 	
 	The approach of the graph-based static analysis of programs is well-known. It is used wide ranged for example with Java \cite{9064792}, 
 	
@@ -240,7 +239,13 @@ control MyDeparser(packet_out packet, in headers hdr) {
 
   %% p4c is a factory. this tool is a laboratory. 
 
+P4 is a relatively new, domain specific language having some uncommon language elements (for example match-action tables). The language makes possible the description of the data plane layer of packet processing algorithms. However for a real execution also a corresponding control plane layer is needed, which part is more or less a black hole while we consider only the P4 source code. Because of these testing, verification and generally functional and non-functional analysis of P4 programs are non trivial tasks sometimes requiring language specific techniques.   
 
+Section~\ref{sec:related} introduces several applications using different analysis methods for P4. The authors also have some earlier results for determining potentially erroneous code parts~\cite{ownCheck} and for predicting execution cost~\cite{LukacsOcs} of P4 programs. These methods usually require different analysis techniques, however these techniques often can have interleaving parts (for example creating an abstract syntax tree or a control flow graph).
+
+This paper presents a framework allows the implementation of different analysis methods using a common basis. The framework applies an extensible integral graph representation where the results of the different analysis methods are represented also as part of the graph. This makes possible execution of different methods in a hierarchical order where methods can use the results (or some part of the results) of previously applied methods. 
+
+The framework supports rapid implementation of new analysis methods applicable for P4 language in a way where results of the methods will be easily reusable. 
 
 	\section{Analysis framework}
 
