@@ -85,7 +85,10 @@
 	
 	
 	\begin{abstract}
-		TODO
+		There are many important tasks in a conventional software development process which can be supported by different analysis techniques. P4 is a high level domain specific language for
+describing the data plane layer of packet processing algorithms. It has several uncommon language elements and concepts often make analysis of P4 programs a laborious task. 
+The paper presents <NAME>, a generic analysis framework for P4 makes possible development of different P4 related analysis methods in a generic and modular way. The framework uses an integral graph representation which contains the results of applied analysis methods too. This way the framework supports rapid implementation of new analysis methods in a way where the results will be also easily reusable by other methods. 
+
 	\end{abstract}
 	
 	%%
@@ -401,7 +404,7 @@ Like this, programmers can almost completely avoid understanding the existing co
    The implementation gets and saves every information about the program with Gremlin queries.
   
   \subsection{Compiler} % 1 hasáb - Dániel
-  In related research~\cite{cscs18,ocs20}, we work on a static cost analysis tool for P4: the tool expects as input a P4 program source code together with execution environment parameters, and outputs various metrics (e.g. execution time, energy efficiency) without actually running the P4 program.
+  In related research~\cite{cscs18,LukacsOcs}, we work on a static cost analysis tool for P4: the tool expects as input a P4 program source code together with execution environment parameters, and outputs various metrics (e.g. execution time, energy efficiency) without actually running the P4 program.
 
   In the current paper, we will not go into details on how the cost analysis tool calculates these metrics, but the principle is that we decompose the P4 program into primitive instructions whose expected cost is constant and already known. Implementations of P4 externals such as extern calls and lookup tables (e.g. \texttt{packet.extract} and \texttt{ipv4\_lpm} and in Figure~\ref{code:P4}) can also be passed to the tool in the form of these primitive instructions with known costs. 
 
