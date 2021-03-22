@@ -108,6 +108,87 @@ describing the data plane layer of packet processing algorithms of different net
 devices (e.g. switches, routers) in a protocol and target independent way. Figure~\ref{code:P4} illustrates a P4 program. The program first defines the applied header structure, than the parser part describes how the fields of the defined headers will be set from the input bit stream (input packet). Controller part can modify values of fields of headers and metadata by applying lookup tables. The data plane program describes the structure of the tables, the key fields based on that lookups will be executed and the possible results of the lookups, namely the applicable actions. However concrete data of the tables (which actions will be executed with which parameters for which key values) are defined by the control plane program, therefore it will not appear in P4. Finally the deparse part defines how the output bit stream (output packet) will be created from the headers.   
 	
 	The paper describes an analysis framework for P4. The framework makes possible development of different P4 related analysis methods in a generic and modular way. It uses an internal graph representation where the results of the methods are also represented as part of the graph (mainly by adding new edges to the graph). In this way the methods can use each other's results as well.  
+
+\begin{figure*}
+\begin{tabular}{|p{3.3cm}|p{5.9cm}|p{7.7cm}|}
+\hline
+\begin{lstlisting}[language=P4]
+// Definitions
+typedef bit<9>  egSpec_t;
+typedef bit<48> macAddr_t;
+typedef bit<32> ip4Addr_t;
+
+// Headers
+header ethernet_t {
+  macAddr_t dstAddr;
+  macAddr_t srcAddr;
+  bit<16>   etherType; }
+    
+header ipv4_t {
+  bit<8>    ttl;
+  ip4Addr_t srcAddr;
+  ip4Addr_t dstAddr;... }
+    
+struct headers {
+  ethernet_t   ethernet;
+  ipv4_t       ipv4; }
+
+\end{lstlisting}
+&
+\begin{lstlisting}[language=P4]
+// Parser
+parser MyParser(...) {
+  state start { transition parse_ethernet; }
+  state parse_ethernet {
+    packet.extract(hdr.ethernet);
+    transition select(hdr.ethernet.etherType) {
+      TYPE_IPV4: parse_ipv4;
+      default: accept; } }
+  state parse_ipv4 {
+    packet.extract(hdr.ipv4);
+    transition accept; } }
+    
+// Control    
+control MyIngress(in headers hdr, ...) {
+  apply {
+    if (hdr.ipv4.isValid()) {
+           ipv4_lpm.apply(); }
+  }         
+  action drop() {
+    mark_to_drop(standard_metadata);
+  }    
+\end{lstlisting}
+&
+\begin{lstlisting}[language=P4]
+  action ipv4_forward(macAddr_t dstAddr, egSpec_t port) {
+    standard_metadata.egress_spec = port;
+    hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+    hdr.ethernet.dstAddr = dstAddr;
+    hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+  }    
+  table ipv4_lpm {
+    key = {  hdr.ipv4.dstAddr: lpm;  }
+    actions = {
+      ipv4_forward;
+      drop;
+      NoAction;}
+    ... }   
+}
+
+//Deparser
+control MyDeparser(packet_out packet, in headers hdr) {
+  apply {
+    packet.emit(hdr.ethernet);
+    packet.emit(hdr.ipv4);}
+}
+\end{lstlisting}\\
+\hline
+\end{tabular}
+\caption{P4 example}
+  \label{code:P4}
+\end{figure*}
+
+
 	
 	
 	\section{Related Work}
@@ -127,7 +208,7 @@ devices (e.g. switches, routers) in a protocol and target independent way. Figur
 	%verification
 	
 	Considering related work there are many research applying specific analysis technics for P4. Most of them concentrate on error checking of P4 programs. For example Assert-P4 \cite{Assert-P4} and Vera \cite{Vera} ask annotated P4 source from the developer and with symbolic execution they check if the predefined properties are correct during the program, although Vera can also detect common errors without annotations. P4V \cite{P4V} creates a formula, which describe the proper behavior of the program and checks the satisfiability of it with SMT solver. These tools are created for an earlier version of P4, namely P4$_\text{14}$. There are also verification tools, which can manage the newer version (P4$_\text{16}$) too. BF4 \cite{bf4} is created as a p4c backend, which can not only detect error possibilities, but it is able to repair them by adding new keys to the table and modify the table contents. An other tool p4-data-flow \cite{p4dataflow} uses data flow analysis to detect potential bugs in P4 switch codes.
-	Some other tools uses analysis methods for different pruposes. For example p4pktgen \cite{p4pktgen} uses symbolic execution for automatically generating test cases.  
+	Some other tools uses analysis methods for different pruposes. For example p4pktgen \cite{p4pktgen} uses symbolic execution for automatically generating test cases. Flightplan \cite{flightplan} can splits a P4 program into a set of cooperating P4 programs and maps them to run as a distributed system formed of several, possibly heterogeneous, dataplanes. During this process they use several analysis technics, for example to gather variables whose values must be transfer between dataplanes.
 	 
 	
 	Our solution is a general tool which contains several analyzes.	
@@ -153,7 +234,7 @@ devices (e.g. switches, routers) in a protocol and target independent way. Figur
 
   %% p4c is a factory. this tool is a laboratory. 
 
-\clearpage
+
 
 	\section{Analysis framework}
 
@@ -351,84 +432,6 @@ code:
   
 	\section{Conclusion and Future Work} % 1 hasáb - Máté
 
-\begin{figure*}
-\begin{tabular}{|p{3.3cm}|p{5.9cm}|p{7.7cm}|}
-\hline
-\begin{lstlisting}[language=P4]
-// Definitions
-typedef bit<9>  egSpec_t;
-typedef bit<48> macAddr_t;
-typedef bit<32> ip4Addr_t;
-
-// Headers
-header ethernet_t {
-  macAddr_t dstAddr;
-  macAddr_t srcAddr;
-  bit<16>   etherType; }
-    
-header ipv4_t {
-  bit<8>    ttl;
-  ip4Addr_t srcAddr;
-  ip4Addr_t dstAddr;... }
-    
-struct headers {
-  ethernet_t   ethernet;
-  ipv4_t       ipv4; }
-
-\end{lstlisting}
-&
-\begin{lstlisting}[language=P4]
-// Parser
-parser MyParser(...) {
-  state start { transition parse_ethernet; }
-  state parse_ethernet {
-    packet.extract(hdr.ethernet);
-    transition select(hdr.ethernet.etherType) {
-      TYPE_IPV4: parse_ipv4;
-      default: accept; } }
-  state parse_ipv4 {
-    packet.extract(hdr.ipv4);
-    transition accept; } }
-    
-// Control    
-control MyIngress(in headers hdr, ...) {
-  apply {
-    if (hdr.ipv4.isValid()) {
-           ipv4_lpm.apply(); }
-  }         
-  action drop() {
-    mark_to_drop(standard_metadata);
-  }    
-\end{lstlisting}
-&
-\begin{lstlisting}[language=P4]
-  action ipv4_forward(macAddr_t dstAddr, egSpec_t port) {
-    standard_metadata.egress_spec = port;
-    hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-    hdr.ethernet.dstAddr = dstAddr;
-    hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
-  }    
-  table ipv4_lpm {
-    key = {  hdr.ipv4.dstAddr: lpm;  }
-    actions = {
-      ipv4_forward;
-      drop;
-      NoAction;}
-    ... }   
-}
-
-//Deparser
-control MyDeparser(packet_out packet, in headers hdr) {
-  apply {
-    packet.emit(hdr.ethernet);
-    packet.emit(hdr.ipv4);}
-}
-\end{lstlisting}\\
-\hline
-\end{tabular}
-\caption{P4 example}
-  \label{code:P4}
-\end{figure*}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{tool}
