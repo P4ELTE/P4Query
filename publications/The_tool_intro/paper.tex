@@ -126,12 +126,11 @@ devices (e.g. switches, routers) in a protocol and target independent way. Figur
 	
 	%verification
 	
-	Our solution is a general tool which contains several analyzes.	There are different analysis specific tools, which concentrate the error checking of P4 programs.
-	  
-	Some of them are created for the first main version of the P4 - the P4$_\text{14}$. For example Assert-P4 \cite{Assert-P4} and Vera \cite{Vera} ask annotated P4 source from the developer and with symbolic execution they check if the predefined properties are correct during the program, although Vera can also detect common errors without annotations. P4V \cite{P4V} creates a formula, which describe the proper behavior of the program and checks the satisfiability of it with SMT solver.
+	Considering related work there are many research applying specific analysis technics for P4. Most of them concentrate on error checking of P4 programs. For example Assert-P4 \cite{Assert-P4} and Vera \cite{Vera} ask annotated P4 source from the developer and with symbolic execution they check if the predefined properties are correct during the program, although Vera can also detect common errors without annotations. P4V \cite{P4V} creates a formula, which describe the proper behavior of the program and checks the satisfiability of it with SMT solver. These tools are created for an earlier version of P4, namely P4$_\text{14}$. There are also verification tools, which can manage the newer version (P4$_\text{16}$) too. BF4 \cite{bf4} is created as a p4c backend, which can not only detect error possibilities, but it is able to repair them by adding new keys to the table and modify the table contents. An other tool p4-data-flow \cite{p4dataflow} uses data flow analysis to detect potential bugs in P4 switch codes.
+	Some other tools uses analysis methods for different pruposes. For example p4pktgen \cite{p4pktgen} uses symbolic execution for automatically generating test cases.  
+	 
 	
-	There are other tools, which can analyze P4$_\text{16}$ programs too. BF4 \cite{bf4} is created as a p4c backend, which can not only detect error possibilities, but it is able to repair them by adding new keys to the table and modify the table contents.
-	
+	Our solution is a general tool which contains several analyzes.	
 	
 	
   %graph-based
