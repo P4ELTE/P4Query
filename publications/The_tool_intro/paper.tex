@@ -215,6 +215,9 @@ control MyDeparser(packet_out packet, in headers hdr) {
 	
 	Our solution is a general tool which contains several analyzes.	
 	
+	The approach of the graph-based static analysis of programs is well-known. It is used wide ranged for example with Java \cite{9064792}, 
+	
+	
 	
   %graph-based
   % - refactorerl
@@ -433,6 +436,15 @@ code:
 \end{figure}
   
 	\section{Conclusion and Future Work} % 1 hasáb - Máté
+	
+	  The goal of this paper is to introduce our analysis framework for P4 programs, which is based on a huge graph representation of the program. Analysis can be easily inserted into the tool, as an expert, which calculates the proper side information from the main syntax tree, and also stores this new information in it. 
+	
+	So far, we have three main applications, which use some subgraph -- experts --, but we plan to increase these numbers and extend them. Two near future plans are the dependency graph and the def-use graph from which we could give some more useful information for the developers about their P4 source. The dependency graph will contain the data and control dependencies between the statements, the def-use graph will show which fields are defined and used in which statements. Based on these analyzes we will be able to see more connection between the statements.		
+	
+	% talán még cost-analysis? slicing? refactor? error correction?	
+	
+	Our major purpose to create a tool, which can facilitate and support the work of  P4 developers.
+	
 
 
 \bibliographystyle{ACM-Reference-Format}
