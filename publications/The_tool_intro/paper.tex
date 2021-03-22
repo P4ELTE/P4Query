@@ -1,6 +1,7 @@
 \documentclass[sigconf]{acmart}
 
 \usepackage{comment, graphicx, algorithm, algorithmic, listings}
+\usepackage[utf8]{inputenc}
 
 
 \lstdefinelanguage{P4}{
@@ -64,7 +65,7 @@
 \begin{document}
 	
 	
-	\title{TODO}
+	\title{<NAME> - an analyser framework for P4}
 	
 	
 	\author{}
@@ -208,7 +209,7 @@ control MyDeparser(packet_out packet, in headers hdr) {
 	%verification
 	
 	Considering related work there are many research applying specific analysis technics for P4. Most of them concentrate on error checking of P4 programs. For example Assert-P4 \cite{assertp4} and Vera \cite{vera} ask annotated P4 source from the developer and with symbolic execution they check if the predefined properties are correct during the program, although Vera can also detect common errors without annotations. P4V \cite{p4v} creates a formula, which describes the proper behavior of the program and checks the satisfiability of it with SMT solver. These tools are created for an earlier version of P4, namely P4$_\text{14}$. There are also verification tools, which can manage the newer version (P4$_\text{16}$) too. BF4 \cite{bf4} is created as a p4c backend, which can not only detect error possibilities, but it is able to repair them by adding new keys to the table and modify the table contents. An other tool p4-data-flow \cite{p4dataflow} uses data flow analysis to detect potential bugs in P4 switch codes.
-	These tools use static analysis, but there are other approaches too. P4RL \cite{p4rl} works with the programs at runtime and its verification is based on fuzzing and reinforcement learning techniques.
+	
 	Some other tools uses analysis methods for different purposes. For example p4pktgen \cite{p4pktgen} uses symbolic execution for automatically generating test cases. Flightplan \cite{flightplan} can splits a P4 program into a set of cooperating P4 programs and maps them to run as a distributed system formed of several, possibly heterogeneous, dataplanes. During this process they use several analysis technics, for example to gather variables whose values must be transfer between dataplanes. 
 
 	 
@@ -330,11 +331,9 @@ Like this, programmers can almost completely avoid understanding the existing co
 	\subsection{Visualisation} % 0.5 hasáb
   
   Since its function is the easiest to understand, the first application we introduce is graph visualisation. This application expects a list of analyser component names, executes them, and then, prints a subgraph of the knowledge graph containing only the domains of the analysers in the list. For example, to print the full version of the graph in Figure~\ref{fig:output}, we should run the following command:
-
   \begin{lstlisting}[language=bash, basicstyle=\scriptsize]
   $ <NAME> draw -A ControlFlow SymbolTable CallGraph CallSites AST
 \end{lstlisting}
-
   The subcommand \texttt{draw} tells <NAME> to run the visualiser, while \texttt{-A} is a flag (defined by the visualiser UI) expects the analyser names that will be passed to the visualiser application. 
 
   A possibly interesting implementation detail here is that the visualiser technically depends on \textit{all} the analysers defined in <NAME>, since it must be able to visualise anything the user may pass. Yet, we still managed to avoid executing those that are not requested by the user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initialization of the dependencies. This way we can filter the analysers and only initialize those that were requested by the user.
