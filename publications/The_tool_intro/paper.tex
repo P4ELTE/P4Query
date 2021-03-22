@@ -342,11 +342,9 @@ Like this, programmers can almost completely avoid understanding the existing co
   \subsection{Verification} % 1 hasáb - Gabi
   Verification is a possible extension of the tool, which is added to it as an application. The main focus is to detect errors and suspicious cases, which can be caused by the usage of invalid header or uninitialized fields. The goal of this detection is to report these usages for the developer to avoid undefined behaviour in the programs. 
   
-  There are different approaches for the verification of the P4 programs. There are tools, which uses symbolic execution \cite{vera}, or SMT solver \cite{p4v, bf4}. The reason we insert the verification into this tool is that we would like to create a universal framework to help the P4 developers in their work and have an assistant analysis, which helps in error detection. 
-  
   The approach of the checking is defined in our previous paper \cite{ownCheck}, but shortly, it calculates the pre-and post-condition of the different blocks -- i.e the control apply functions, the tables and actions --, the parser and the deparser of the program and based on their results it can detect improper usage of the fields and headers. Three types of cases can be detected: when there are some error cases in a block; when there is any inconsistency between the blocks; and when the need of the parser-deparser is inconsistent with the need of the control function.
   
-  In Figure \ref{code:cond}, there is an example condition for the MyIngress. We can see 4 pairs of conditions, because it has 4 possible execution paths - there are three when the condition is true, and the table executes one of the possible actions i.e. $\mathit{ipv4\_forward}$, $\mathit{drop}$ or $\mathit{NoAction}$, and one when the condition is false.
+  In Figure \ref{code:cond}, there is an example condition for the MyIngress. We can see 4 pairs of conditions, because it has 4 possible execution paths - there are three when the condition of the branch is true, and the table executes one of the possible actions i.e. $\mathit{ipv4\_forward}$, $\mathit{drop}$ or $\mathit{NoAction}$, and one when the condition of the branch is false.
   
   \begin{figure}
   	\begin{lstlisting}[language=cond]
@@ -388,7 +386,8 @@ Like this, programmers can almost completely avoid understanding the existing co
   	\label{code:cond}
   \end{figure}
   
-  This calculation is built into the tool as an application, which uses the call-graph and the control-flow graph analyzes of the experts. The method can combine these two graphs, and while traversing them, it calculates the condition pair for the vertices of the call graph, while getting the information for it from the control flow graph. 
+   This calculation is built into the tool as an application. It uses two experts: the call graph and control-flow graph. While traversing through the call graph it can reach calls of tables and actions. When it reaches a call, it starts to traverse through the proper subgraph of the control-flow graph and calculates the conditions of the actual block. Every condition is stored in the graph as a property of the called vertex of the call graph. 
+   The implementation gets and saves every information about the program with Gremlin queries.
   
   \subsection{Compiler} % 1 hasáb - Dániel
   In related research~\cite{cscs18,ocs20}, we work on a static cost analysis tool for P4: the tool expects as input a P4 program source code together with execution environment parameters, and outputs various metrics (e.g. execution time, energy efficiency) without actually running the P4 program.
