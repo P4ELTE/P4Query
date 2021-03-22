@@ -112,9 +112,9 @@ devices (e.g. switches, routers) in a protocol and target independent way. Figur
 
 
 \begin{figure*}
-\begin{tabular}{|p{3.3cm}|p{5.9cm}|p{7.7cm}|}
+\begin{tabular}{|p{3.75cm}|p{6.5cm}|p{6.5cm}|}
 \hline
-\begin{lstlisting}[language=P4]
+{\begin{lstlisting}[language=P4,numbers=left,firstnumber=1,xleftmargin=2.5em]
 // Definitions
 typedef bit<9>  egSpec_t;
 typedef bit<48> macAddr_t;
@@ -124,20 +124,23 @@ typedef bit<32> ip4Addr_t;
 header ethernet_t {
   macAddr_t dstAddr;
   macAddr_t srcAddr;
-  bit<16>   etherType; }
+  bit<16>   etherType; 
+}
     
 header ipv4_t {
   bit<8>    ttl;
   ip4Addr_t srcAddr;
-  ip4Addr_t dstAddr;... }
+  ip4Addr_t dstAddr;... 
+}
     
 struct headers {
   ethernet_t   ethernet;
-  ipv4_t       ipv4; }
+  ipv4_t       ipv4; 
+}
 
-\end{lstlisting}
+\end{lstlisting}}
 &
-\begin{lstlisting}[language=P4]
+{\begin{lstlisting}[language=P4,numbers=left,firstnumber=24,xleftmargin=2.5em]
 // Parser
 parser MyParser(...) {
   state start { transition parse_ethernet; }
@@ -148,21 +151,24 @@ parser MyParser(...) {
       default: accept; } }
   state parse_ipv4 {
     packet.extract(hdr.ipv4);
-    transition accept; } }
+    transition accept; } 
+}
     
 // Control    
 control MyIngress(in headers hdr, ...) {
   apply {
     if (hdr.ipv4.isValid()) {
-           ipv4_lpm.apply(); }
+           ipv4_lpm.apply(); 
+    }
   }         
   action drop() {
     mark_to_drop(standard_metadata);
   }    
-\end{lstlisting}
+\end{lstlisting}}
 &
-\begin{lstlisting}[language=P4]
-  action ipv4_forward(macAddr_t dstAddr, egSpec_t port) {
+{\begin{lstlisting}[language=P4,numbers=left,firstnumber=47,xleftmargin=2.5em]
+  action ipv4_forward(macAddr_t dstAddr, 
+                      egSpec_t port) {
     standard_metadata.egress_spec = port;
     hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
     hdr.ethernet.dstAddr = dstAddr;
@@ -178,12 +184,13 @@ control MyIngress(in headers hdr, ...) {
 }
 
 //Deparser
-control MyDeparser(packet_out packet, in headers hdr) {
+control MyDeparser(packet_out packet, 
+                   in headers hdr) {
   apply {
     packet.emit(hdr.ethernet);
     packet.emit(hdr.ipv4);}
 }
-\end{lstlisting}\\
+\end{lstlisting}}\\
 \hline
 \end{tabular}
 \caption{P4 example}

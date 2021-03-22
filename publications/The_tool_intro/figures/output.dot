@@ -1,21 +1,22 @@
 digraph {
   graph [];
   margin=0;
-  nodesep=1.5;
+  nodesep=0.1;
+  ranksep=0.1;
   node [shape = record, style=rounded, fontname = "STIXGeneral"];
   edge [ fontname = "STIXGeneral"];
 
-  control [label="{ class = ControlDecl | line = }"];
-  controlName [label="{ class = Term | line = | val = MyIngress}"];
-  block [label="{ class = BlockStmt | line = }"];
-  cond [label="{ class = CondStmt | line = }"];
-  expr [label="{ class = Expr | line = }"];
-  block2 [label="{ class = BlockStmt | line = }"];
-  app [label="{ class = DirectApp | line = }"];
-  table [label="{ class = TableDecl | line = }"];
-  tabName [label="{ class = Term | line = | val = ipv4_lpm}"];
-  act1 [label="{ class = ActionDecl | line = }"];
-  act2 [label="{ class = ActionDecl | line = }"];
+  control [label="{ class = ControlDecl | line = 38}"];
+  controlName [label="{ class = Term | line = 38 | val = MyIngress}"];
+  block [label="{ class = BlockStmt | line = 39 }"];
+  cond [label="{ class = CondStmt | line = 40 }"];
+  expr [label="{ class = Expr | line = 40 }"];
+  block2 [label="{ class = BlockStmt | line = 40 }"];
+  app [label="{ class = DirectApp | line = 41 }"];
+  table [label="{ class = TableDecl | line = 54 }"];
+  tabName [label="{ class = Term | line = 54 | val = ipv4_lpm}"];
+  act1 [label="{ class = ActionDecl | line = 47 }"];
+  act2 [label="{ class = ActionDecl | line = 44 }"];
 
   control -> controlName [label="dom=SYMBOL\lrole=declares"];
   control -> block [label="dom=CFG\lrole=entry"];
