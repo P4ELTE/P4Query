@@ -463,11 +463,11 @@ code:
   
 	\section{Conclusion and Future Work}
 	
-	The goal of this paper is to introduce our static analysis framework for P4 programs, which uses a graph representation of the checked program. The tool is modular, therefore it can be extended with analysers to increase the possibilities of the program analysis. All of the analysers are based on the syntax tree of the examined P4 source and they extend it with new edges while creating new subgraphs -- like control-flow or call graph -- or new labels to store the calculated information.
-	 
-	So far, we have three main applications, which use some subgraph -- experts --, but we plan to increase these numbers and extend them. As an example, two near-future plans are the dependency graph and the def-use graph from which we could give some more useful information for the developers about their P4 source. The dependency graph will contain the data and control dependencies between the statements, the def-use graph will show which fields are defined and used in which statements. Based on these analyses we will be able to see more connection between the statements.		
-	
 	Our major purpose to create a tool, which can facilitate and support the work of  P4 developers while making the possibility to experiment with these programs. Its modular structure gives the opportunity for the user to avoid the usage of several tools for different analyses, although it makes the possibility to have all information in one place. 
+	
+	The goal of this paper is to introduce our static analysis framework for P4 programs, which uses a graph representation of the checked program. All of the analysers are based on the syntax tree of the examined P4 source and they extend it with new edges while creating new subgraphs -- like control-flow or call graph -- or new labels to store the calculated information.
+	 
+	In the future, we would like to extend the tool with new analyses to give some other useful information for the developers about their P4 source. Our nearest idea is to supplement it with the dependency graph and def-use graph with which we will be able to give report, which are based on the connection between the statements.		
 
 \begin{acks}
 The research has been supported by the European Union, co-financed by the European Social Fund 
