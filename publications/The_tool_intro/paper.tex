@@ -65,7 +65,7 @@
 \begin{document}
 	
 	
-	\title{<NAME> - an analyser framework for P4}
+	\title{P4Query - an analyser framework for P4}
 	
 	
 	\author{Dániel Lukács}
@@ -99,7 +99,7 @@
 	\begin{abstract}
 		There are many important tasks in a conventional software development process which can be supported by different analysis techniques. P4 is a high level domain specific language for
 describing the data plane layer of packet processing algorithms. It has several uncommon language elements and concepts often make analysis of P4 programs a laborious task. 
-The paper presents <NAME>, a generic analysis framework for P4 makes possible development of different P4 related analysis methods in a generic and modular way. The framework uses an integral graph representation which contains the results of applied analysis methods too. This way the framework supports rapid implementation of new analysis methods in a way where the results will be also easily reusable by other methods. 
+The paper presents P4Query, a generic analysis framework for P4 makes possible development of different P4 related analysis methods in a generic and modular way. The framework uses an integral graph representation which contains the results of applied analysis methods too. This way the framework supports rapid implementation of new analysis methods in a way where the results will be also easily reusable by other methods. 
 
 	\end{abstract}
 	
@@ -287,10 +287,10 @@ One goal of the experiment we present here is to relax the three-fold structure 
 Besides proposing a more relaxed structure of analysis passes, we had three additional goals in sight: support for different applications through uniform APIs, ease of extensibility, and data-driven programming.
 
 By \textit{supporting different applications} (or backends, in compiler parlance), we mean providing a comfortable way to to implement different end-users services, by reusing the same static code analysis operations.
-See Section~\ref{sec:apps} for a few examples of applications built on top of the <NAME>.
+See Section~\ref{sec:apps} for a few examples of applications built on top of the P4Query.
 In systems with uniform APIs, programmers have to learn only one paradigm to maintain, extend or otherwise alter the system (e.g. in case of P4C, visitors and passes are the main concepts of such a uniform API). 
 
-Figure~\ref{fig:arch-top} depicts how the architecture of <NAME> realizes uniform APIs by relying on a graph database. 
+Figure~\ref{fig:arch-top} depicts how the architecture of P4Query realizes uniform APIs by relying on a graph database. 
 Superficially, applications provide services to the user, by using the services provided by the infrastructure (see Section~\ref{sec:infra}). In reality, both the infrastructure and applications operate on a large shared graph that collects all our knowledge about the program code. The graph is also exposed to the user to enable custom features (e.g. to attach external loggers, visualisers, and validators). The information in the knowledge graph is accessed using graph queries written in Gremlin. The implication is that users, application developers, and infrastructure developers are using one, uniform data structure, and are accessing it using the same mechanism. The seamless collaboration of all these components is managed by the controller component.
 
   \begin{figure}
@@ -311,7 +311,7 @@ The information in the graph is regulated by a well-defined graph schema, and th
 Like this, programmers can almost completely avoid understanding the existing code base, and only have to look at and interact with the data in the graph.  
 
 \paragraph{Gremlin API}
-In the tool architecture described in this section, we use a Gremlin graph database as storage backend (knowledge graph). Gremlin is a compositional query language and API that is implemented by many large-scale graph databases. This makes it possible to change graph implementations with almost no modification to the <NAME> code base. In earlier work~\cite{icai20}, we also profiled a few graph backends for control flow traverals, and verified that -- apart from the initial overhead -- in-memory graph databases have comparable performance to built-in memory manipulation. 
+In the tool architecture described in this section, we use a Gremlin graph database as storage backend (knowledge graph). Gremlin is a compositional query language and API that is implemented by many large-scale graph databases. This makes it possible to change graph implementations with almost no modification to the P4Query code base. In earlier work~\cite{icai20}, we also profiled a few graph backends for control flow traverals, and verified that -- apart from the initial overhead -- in-memory graph databases have comparable performance to built-in memory manipulation. 
 
   Another consequence is that analysers have to be implemented as graph query workflows. By coarsely granularizing queries, most of the work can be delegated to the database, and with this, the choice of the workflow language (e.g. Java) can become negligible. 
 (Although in our experience large queries can hinder code maintainability as these are often more difficult to read and modify.)
@@ -320,7 +320,7 @@ In the tool architecture described in this section, we use a Gremlin graph datab
 	
   \subsection{Infrastructure}\label{sec:infra} % 1 hasáb - Dániel
 	% kisebb gráf ábra
-  As we see earlier in Figure~\ref{fig:arch-deps}, the heavy-lifting in <NAME> is done by various code analyser components, each adding new information about the P4 code to the knowledge graph using what is already there. We now introduce a few analyser modules using an example: Figure~\ref{fig:output} depicts a small subset of the knowledge graph taken after we executed control flow analysis, call analysis, and call sites analysis on the P4 code in Figure~\ref{code:P4} (specifically the \texttt{MyIngress} control). 
+  As we see earlier in Figure~\ref{fig:arch-deps}, the heavy-lifting in P4Query is done by various code analyser components, each adding new information about the P4 code to the knowledge graph using what is already there. We now introduce a few analyser modules using an example: Figure~\ref{fig:output} depicts a small subset of the knowledge graph taken after we executed control flow analysis, call analysis, and call sites analysis on the P4 code in Figure~\ref{code:P4} (specifically the \texttt{MyIngress} control). 
   First, the controller finds the topological order of their dependencies, and then starts executing them in order. In this case, the first dependency executed is the parser, parsing the P4 code and filling the knowledge graph with the syntax tree nodes and edges. 
 
   Each analyser components adds new edges as an overlay graph. These overlays (domains) are separated by the \texttt{dom} edge-attributes: for example \texttt{CFG} is the domain introduced by the control flow analysis, and \texttt{CALL} is the domain of the call analysis, \texttt{SITES} is that of call site analysis. The \texttt{role} edge-attribute describes edge semantics inside their domain. For example, \texttt{calls} in \texttt{CALL} links a procedure to those procedures that it calls (e.g. \texttt{MyIngress} control calling \texttt{ipv4\_lpm} table lookup). On the other hand, \texttt{calls} in \texttt{SITES} links call statements (the \textit{direct application} of table \texttt{ipv4\_lpm}) to the called procedure (table \texttt{ipv4\_lpm}). 
@@ -353,17 +353,17 @@ The figure also partially includes domains of other analysers, such as \texttt{S
 	% indítási információk - mindegyiknél /visualisation-nél
 	% egyedi elemzések mérése
 
-  In this section, we illustrate the viability of the platform by showcasing a few applications we are currently building on top of <NAME> in related research. 
+  In this section, we illustrate the viability of the platform by showcasing a few applications we are currently building on top of P4Query in related research. 
 
 	\subsection{Visualisation} % 0.5 hasáb
   
-  Since it is the easiest to understand, the first application we introduce is graph visualisation. This application expects a list of analyser component names, executes them, and then, prints a subgraph of the knowledge graph containing only the domains of the analysers in the list. For example, to print the full version of the graph in Figure~\ref{fig:output}, we should execute <NAME> with the following arguments:
+  Since it is the easiest to understand, the first application we introduce is graph visualisation. This application expects a list of analyser component names, executes them, and then, prints a subgraph of the knowledge graph containing only the domains of the analysers in the list. For example, to print the full version of the graph in Figure~\ref{fig:output}, we should execute P4Query with the following arguments:
   \begin{lstlisting}[language=bash, basicstyle=\footnotesize]
-$ <NAME> draw example.p4 -A CFG SYMBOL CALL SITES AST 
+$ p4query draw example.p4 -A CFG SYMBOL CALL SITES AST 
 \end{lstlisting}
-The subcommand \texttt{draw} tells <NAME> to run the visualiser on the file \texttt{example.p4}, while \texttt{-A} is a flag (defined by the visualiser UI) expects the analyser names that will be passed to the visualiser application. 
+The subcommand \texttt{draw} tells P4Query to run the visualiser on the file \texttt{example.p4}, while \texttt{-A} is a flag (defined by the visualiser UI) expects the analyser names that will be passed to the visualiser application. 
 
-  A possibly interesting implementation detail here is that the visualiser technically depends on \textit{all} the analysers defined in <NAME>, since it must be able to visualise anything the user may pass. Yet, we still managed to avoid executing those that are not requested by the user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initialization of the dependencies. This way we can filter the analysers and only initialize those that were requested by the user.
+  A possibly interesting implementation detail here is that the visualiser technically depends on \textit{all} the analysers defined in P4Query, since it must be able to visualise anything the user may pass. Yet, we still managed to avoid executing those that are not requested by the user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initialization of the dependencies. This way we can filter the analysers and only initialize those that were requested by the user.
 
   \subsection{Verification} % 1 hasáb - Gabi
   Verification is a possible extension of the tool, which is added to it as an application. The main focus is to detect errors and suspicious cases, which can be caused by the usage of invalid header or uninitialized fields. The goal of this detection is to report these usages for the developer to avoid undefined behaviour in the programs. 
@@ -421,11 +421,11 @@ The subcommand \texttt{draw} tells <NAME> to run the visualiser on the file \tex
 
   In the current paper, we will not go into details on how the cost analysis tool calculates these metrics, but the principle is that we decompose the P4 program into primitive instructions whose expected cost is constant and already known. Implementations of P4 externals such as extern calls and lookup tables (e.g. \texttt{packet.extract} and \texttt{ipv4\_lpm} and in Figure~\ref{code:P4}) can also be passed to the tool in the form of these primitive instructions with known costs. 
 
-  From this, it follows that part of the static cost analysis problem reduces to a compilation-and-linking problem. As an experiment, we implemented a compiler to solve this problem as an application in <NAME>. The main reason we chose <NAME>, instead of the much more mature P4C compiler framework was that at first we did not know what kind of representation or code we will need to output: the control and extensibility provided by <NAME> and Gremlin queries gave us tools to experiment and create quick, recyclable prototypes to help us arrive at a final vision. While P4C's safety mechanisms (e.g. C++ static type system) support developing stable software, in case of prototyping and experimentation these same mechanisms are unused, or possibly even slowing down development.
+  From this, it follows that part of the static cost analysis problem reduces to a compilation-and-linking problem. As an experiment, we implemented a compiler to solve this problem as an application in P4Query. The main reason we chose P4Query, instead of the much more mature P4C compiler framework was that at first we did not know what kind of representation or code we will need to output: the control and extensibility provided by P4Query and Gremlin queries gave us tools to experiment and create quick, recyclable prototypes to help us arrive at a final vision. While P4C's safety mechanisms (e.g. C++ static type system) support developing stable software, in case of prototyping and experimentation these same mechanisms are unused, or possibly even slowing down development.
 
   Our current target representation for cost analysis is a sequential stack machine with an instruction set similar to JVM bytecode. Figure~\ref{code:stack} depicts the compiler output of \texttt{MyIngress} in Figure~\ref{code:P4}. In the figure all values (bits and sizes) are represented as integers (a requirement by our cost analysis approach). Both \texttt{isValid} and \texttt{ipv4\_lpm} have external implementation that had to be linked with the calls. While most P4 targets will not support stack machines, we chose this representation as it is relatively easy to generate, and relatively straightforward to implement. We also believe that as long as we do not count the cost of maintaining the stack, we can still make good cost estimations.
   
-  The compiler is built on top of the control flow analyser in <NAME>: we traverse the CFG, and process each node by traversing the syntax tree under the node. We also use the call graph to find which label to jump to when a function is called. Thus, much of the compiler state can be delegated to the persistent knowledge graph, and only very specific data (e.g. instruction labels) and linking requires program state outside the graph.  
+  The compiler is built on top of the control flow analyser in P4Query: we traverse the CFG, and process each node by traversing the syntax tree under the node. We also use the call graph to find which label to jump to when a function is called. Thus, much of the compiler state can be delegated to the persistent knowledge graph, and only very specific data (e.g. instruction labels) and linking requires program state outside the graph.  
 
   \begin{figure}
   \begin{lstlisting}[language=asm]
