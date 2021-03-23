@@ -68,19 +68,31 @@
 	\title{<NAME> - an analyser framework for P4}
 	
 	
-	\author{}
-	\email{}
-	\orcid{}
-	\author{}
-	\authornotemark[]
-	\email{}
+	\author{Dániel Lukács}
+	\email{dlukács@inf.elte.hu}
+	\orcid{0000-0001-9738-1134}
 	\affiliation{%
-		\institution{}
-		\streetaddress{}
-		\city{}
-		\state{}
-		\country{}
-		\postcode{}
+		\institution{ELTE, Eötvös Loránd University, Faculty of Informatics}
+        \country{Hungary}
+        \city{Budapest}
+	}
+	
+	\author{Gabriella Tóth}
+	\email{kistoth@inf.elte.hu}
+	\orcid{}
+	\affiliation{%
+		\institution{ELTE, Eötvös Loránd University, Faculty of Informatics}
+        \country{Hungary}
+        \city{Budapest}
+	}
+	
+	\author{Máté Tejfel}
+	\email{matej@inf.elte.hu}
+	\orcid{0000-0001-8982-1398}
+	\affiliation{%
+		\institution{ELTE, Eötvös Loránd University, Faculty of Informatics}
+        \country{Hungary}
+        \city{Budapest}
 	}
 	
 	
@@ -97,7 +109,7 @@ The paper presents <NAME>, a generic analysis framework for P4 makes possible de
 	%% TODO
 
 	
-	\keywords{TODO}
+	\keywords{P4 language, static analysis, analysis framework}
 	
 	
 	\maketitle
@@ -456,6 +468,13 @@ code:
 	So far, we have three main applications, which use some subgraph -- experts --, but we plan to increase these numbers and extend them. As an example, two near-future plans are the dependency graph and the def-use graph from which we could give some more useful information for the developers about their P4 source. The dependency graph will contain the data and control dependencies between the statements, the def-use graph will show which fields are defined and used in which statements. Based on these analyses we will be able to see more connection between the statements.		
 	
 	Our major purpose to create a tool, which can facilitate and support the work of  P4 developers while making the possibility to experiment with these programs. Its modular structure gives the opportunity for the user to avoid the usage of several tools for different analyses, although it makes the possibility to have all information in one place. 
+
+\begin{acks}
+The research has been supported by the European Union, co-financed by the European Social Fund 
+(EFOP-3.6.3-VEKOP-16-2017-00002). M. Tejfel also thanks the support of the project
+"Application Domain Specific Highly Reliable IT Solutions" implemented with the support of the NRDI Fund
+of Hungary, financed under the Thematic Excellence Programme TKP2020-NKA-06 (National Challenges Subprogramme) funding scheme.
+\end{acks}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{tool}
