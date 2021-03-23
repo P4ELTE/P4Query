@@ -12,8 +12,12 @@ import com.beust.jcommander.ParameterException;
 
 public abstract class AppUI {
 
+    private String actualDbLocation;
+    private String actualP4FilePath;
+
     abstract public String getCommandName(); 
     abstract public String[] getCommandNameAliases(); 
+
 
     @Parameter(description = "<location of P4 file to be analysed>" /* , required = true  */)
     public String p4FilePath;
@@ -33,6 +37,23 @@ public abstract class AppUI {
 
     @Parameter(names="--misc", description = "(For developers) Arbitrary list of strings that can be read by some of the analysers for development and testing purposes." /* , required = true  */)
     public List<String> misc;
+
+    public void init(String actualDatabaseLocation, String actualP4FilePath){
+        this.actualDbLocation = actualDatabaseLocation;
+        this.actualP4FilePath = actualP4FilePath;
+    }
+
+    public String getActualDbLocation() {
+        if(actualDbLocation == null && databaseLocation != null)
+            throw new IllegalAccessError(AppUI.class + " should have been initialized, and with non-null values.");
+        return actualDbLocation;
+    }
+
+    public String getActualP4FilePath() {
+        if(actualP4FilePath == null)
+            throw new IllegalAccessError(AppUI.class + " should have been initialized, and with non-null values.");
+        return actualP4FilePath;
+    }
 
     public static class OptionCannotBeValueValidator implements IParameterValidator {
         public void validate(String name, String value)

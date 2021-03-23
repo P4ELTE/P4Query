@@ -5,6 +5,7 @@
 package p4analyser.broker;
 
 public class LocalGremlinServerException extends Exception {
+    private static final long serialVersionUID = 1L;
 
     public LocalGremlinServerException(String message) {
         super(message);

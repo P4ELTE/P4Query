@@ -26,90 +26,103 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import com.beust.jcommander.JCommander;
 import com.thoughtworks.xstream.XStream;
 
 import org.codejargon.feather.Feather;
 import org.codejargon.feather.Key;
 import org.reflections.Reflections;
-import org.reflections.ReflectionsException;
 import org.reflections.scanners.MethodAnnotationsScanner;
 
-import p4analyser.ontology.Status;
-import p4analyser.ontology.analyses.AbstractSyntaxTree;
-import p4analyser.ontology.analyses.ControlFlow;
+import p4analyser.ontology.IllegalUserInputException;
 import p4analyser.ontology.providers.AppUI;
 import p4analyser.ontology.providers.Application;
 
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
-
 public class App {
 
-    // private static final List<Class<? extends Annotation>> analyses =
-    // Arrays.asList(SyntaxTree.class);
+    // used for default includes and input file
+    public static final String CORE_P4_PATH = "core.p4";
+    public static final String V1MODEL_P4_PATH = "v1model.p4";
+    public static final String BASIC_P4_PATH = "basic.p4";
 
+    // used for implementation discovery
     private static final String EXPERTS_PACKAGE = "p4analyser.experts";
     private static final String APPLICATIONS_PACKAGE = "p4analyser.applications";
     private static final String ANALYSES_PACKAGE = "p4analyser.ontology.analyses";
 
     // TODO a white list would be better
-    // NOTE: before you extend this list with your class, check out the --readonly option
+    // NOTE: before you extend this list with your class, check out the --readonly
+    // option
     private static final Collection<Class<?>> DO_NOT_SERIALIZE = Arrays.asList(GraphTraversalSource.class);
 
-    private static final ClassLoader loader = Thread.currentThread().getContextClassLoader();
-    private static String GREMLIN_CLIENT_CONF_PATH;
+    private final Map<Class<? extends Annotation>, Object> analysers;
+    private final Map<String, Application> apps;
+    private final CLIArgsProvider cli;
+    private final Feather feather;
+    private final LocalGremlinServer server;
 
-    // NOTE Unlike with YAML, we can use "classpath:" notation in .properties files,
-    // so it turned out we don't need this:
-    // private static String GREMLIN_CLIENT_CONF_CLUSTERFILE_PATH =
-    // loader.getResource("conf/remote-objects.yaml").getPath();
-
-    public static final String CORE_P4 ;
-    public static final String V1MODEL_P4;
-    public static final String BASIC_P4 ;
-
-    static {
-        try {
-            GREMLIN_CLIENT_CONF_PATH = contentsToTempFile(
-                loader.getResourceAsStream("conf/remote-graph.properties"), "conf/remote-graph.properties");
-            CORE_P4 = contentsToTempFile(loader.getResourceAsStream("core.p4"), "core.p4");
-            V1MODEL_P4 = contentsToTempFile(loader.getResourceAsStream("v1model.p4"), "v1model.p4");
-            BASIC_P4 = contentsToTempFile(loader.getResourceAsStream("basic.p4"), "basic.p4");
-        } catch(IOException e){
-            throw new RuntimeException(e);
-        }
-
-        loadClientConfig();
-    }
+    // NOTE: field order matters
+    // NOTE: loading files from classpath seems to be platform-dependent, so we load them as streams and write them to temp files
+    private final ClassLoader loader =  Thread.currentThread().getContextClassLoader();
+    private final String actualCoreP4 = contentsToTempFile(loader.getResourceAsStream(CORE_P4_PATH), "core.p4");
+    private final String actualV1ModelP4 = contentsToTempFile(loader.getResourceAsStream(V1MODEL_P4_PATH), "v1model.p4");
+    private final String actualBasicP4 = contentsToTempFile(loader.getResourceAsStream(BASIC_P4_PATH), "basic.p4");
+    private P4FileService pfs;
 
     public static void main(String[] args) throws Exception {
 
-        // prepare injector
-        App broker = new App(args);  
+        try {
+            App broker = new App(args);
+            broker.run();
+        } catch (IllegalUserInputException e) {
+            System.out.println(e.getMessage());
+        } // otherwise: crash
+
+        System.exit(0);
+    }
+
+
+    private App(String[] args) throws DiscoveryException, IOException, LocalGremlinServerException,
+            ClassNotFoundException, ReflectionException, IllegalUserInputException {
+
+        analysers = App.discoverAnalysers();
+        System.out.println("Analysers discovered: " + analysers);
+
+        apps = App.discoverApplications();
+        System.out.println("Applications discovered:" + apps);
+
+        cli = new CLIArgsProvider(args, apps, actualBasicP4);
+        System.out.println("Command:" + cli.getInvokedAppUI().getCommandName() + " " + cli.getInvokedAppUI());
+
+        String p4FilePath = cli.getInvokedAppUI().getActualP4FilePath();
+        pfs = new P4FileService(p4FilePath, actualCoreP4, actualV1ModelP4);
+
+        server = initGremlinServer(cli);
+
+        feather = initDI(cli, pfs, analysers, server);
+    }
+
+    private void run() throws Exception {
+
+        AppUI ui = cli.getInvokedAppUI();
 
         // run the experts (except the ones the application lazily initializes)
-        broker.feather.injectFields(broker.invokedApp); 
+        feather.injectFields(cli.getInvokedApp());
 
         // run the application
-        broker.invokedApp.run(); 
+        cli.getInvokedApp().run();
 
-        if (broker.persistingDirectory != null ) {
-            if(!broker.readonly){
-                App.saveInjector(broker.persistingDirectory, broker.feather);
+        if (ui.getActualDbLocation() != null) {
+            if (!ui.readonly) {
+                App.saveInjector(ui.getActualDbLocation(), feather);
             } else
                 System.out.println("--readonly argument found, modifications are not saved");
         }
 
-        broker.server.close();
-        System.exit(0);
+        server.close();
     }
 
     private static String contentsToTempFile(InputStream is, String fileName) throws IOException {
@@ -122,61 +135,6 @@ public class App {
         return f.getAbsolutePath();
     }
 
-
-    private Feather feather;
-    private LocalGremlinServer server;
-    private final Map<Class<? extends Annotation>, Object> analysers;
-    private final Map<String, Application> apps;
-    private final Application invokedApp;
-    private String persistingDirectory;
-    private final String p4FilePath;
-    private boolean readonly;
-    private boolean reset;
-
-    private App(String[] args) throws DiscoveryException, IOException, LocalGremlinServerException,
-            ClassNotFoundException, ReflectionException {
-
-        analysers = App.discoverAnalysers();
-        System.out.println("Analysers discovered: " + analysers);
-
-        apps = App.discoverApplications();
-        System.out.println("Applications discovered:" + apps);
-
-        JCommander jc = parseCLIArgs(args);
-
-        String commandName = jc.getParsedCommand();
-        if (commandName == null) {
-            System.out.println("Please, provide a command argument.");
-            jc.usage();
-            System.exit(0);
-        }
-
-        invokedApp = apps.get(commandName);
-
-        if (invokedApp.getUI().help) {
-            jc.usage();
-            System.exit(0);
-        }
-
-        System.out.println("Command:" + invokedApp.getUI().getCommandName() + " " + invokedApp.getUI());
-
-        reset = invokedApp.getUI().reset;
-        readonly = invokedApp.getUI().readonly;
-
-        p4FilePath = this.ensureP4FileOrDefault(invokedApp.getUI().p4FilePath);
-
-        if (invokedApp.getUI().databaseLocation != null) {
-            if(reset && readonly){
-               throw new IllegalArgumentException("--reset and -- readonly are conflicting options, use at most one.");
-            }
-
-            persistingDirectory = 
-                App.ensurePersistingDirectoryExists(invokedApp.getUI().databaseLocation, p4FilePath);
-        }
-
-
-        this.initBrokerState();
-    }
 
     public static Map<String, Application> discoverApplications() throws DiscoveryException {
         Reflections reflections = new Reflections(APPLICATIONS_PACKAGE);
@@ -192,19 +150,20 @@ public class App {
             Object candid;
             try {
                 candid = m.getConstructor().newInstance();
-            } catch (InstantiationException | IllegalAccessException 
-                    | InvocationTargetException | SecurityException | IllegalArgumentException
-                    | NoSuchMethodException e) {
-                        throw new DiscoveryException(e);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | SecurityException
+                    | IllegalArgumentException | NoSuchMethodException e) {
+                throw new DiscoveryException(e);
             }
-            if(!(candid instanceof Application)){
-                throw new IllegalStateException(
-                    String.format("Application %s does not implement interface %s", 
-                                  Application.class.getSimpleName()));
+            if (!(candid instanceof Application)) {
+                throw new IllegalStateException(String.format("Application %s does not implement interface %s",
+                        Application.class.getSimpleName()));
             }
+
             Application app = (Application) candid;
-            if(apps.get(app.getUI().getCommandName()) != null)
+
+            if (apps.get(app.getUI().getCommandName()) != null)
                 throw new IllegalStateException("Ambiguous application name " + app.getUI().getCommandName());
+
             apps.put(app.getUI().getCommandName(), app);
         }
 
@@ -215,33 +174,28 @@ public class App {
 
         Reflections reflections = new Reflections(EXPERTS_PACKAGE, new MethodAnnotationsScanner());
 
-         Map<Class<? extends Annotation>, Object> analyserImplemms = new HashMap<>();
+        Map<Class<? extends Annotation>, Object> analyserImplemms = new HashMap<>();
         for (Class<? extends Annotation> analysis : discoverAnalyses()) {
             Set<Method> methods = reflections.getMethodsAnnotatedWith(analysis);
-            if(methods.isEmpty()){
-                String msg = 
-                    String.format("No implementation found in %s for analysis %s",
-                    EXPERTS_PACKAGE,
-                    analysis.getSimpleName());
+            if (methods.isEmpty()) {
+                String msg = String.format("No implementation found in %s for analysis %s", EXPERTS_PACKAGE,
+                        analysis.getSimpleName());
                 throw new IllegalStateException(msg);
             }
 
-            Collection<Class<?>> implems = methods.stream().map(m -> m.getDeclaringClass()).collect(Collectors.toList());
-            if(implems.size() > 1){
-                String msg = 
-                    String.format("Ambigous implementations found in %s for analysis %s: %s",
-                                EXPERTS_PACKAGE,
-                                analysis.getSimpleName(),
-                                implems.stream().map(c -> c.getSimpleName()).toArray());
+            Collection<Class<?>> implems = methods.stream().map(m -> m.getDeclaringClass())
+                    .collect(Collectors.toList());
+            if (implems.size() > 1) {
+                String msg = String.format("Ambigous implementations found in %s for analysis %s: %s", EXPERTS_PACKAGE,
+                        analysis.getSimpleName(), implems.stream().map(c -> c.getSimpleName()).toArray());
                 throw new IllegalStateException(msg);
             }
 
             try {
                 analyserImplemms.put(analysis, implems.iterator().next().getConstructor().newInstance());
-            } catch (InstantiationException | IllegalAccessException 
-                    | InvocationTargetException | SecurityException | IllegalArgumentException
-                    | NoSuchMethodException e) {
-                        throw new DiscoveryException(e);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | SecurityException
+                    | IllegalArgumentException | NoSuchMethodException e) {
+                throw new DiscoveryException(e);
             }
 
         }
@@ -251,91 +205,39 @@ public class App {
     public static Collection<Class<? extends Annotation>> discoverAnalyses() {
         Reflections reflections = new Reflections(ANALYSES_PACKAGE);
 
-        Set<Class<? extends Annotation>> analyses = 
-            reflections.getSubTypesOf(Annotation.class);
+        Set<Class<? extends Annotation>> analyses = reflections.getSubTypesOf(Annotation.class);
 
         return analyses;
 
     }
 
-    private JCommander parseCLIArgs(String[] args) {
-
-        JCommander.Builder jcb = JCommander.newBuilder();
-
-        for (Application app : apps.values()) {
-            AppUI cmd = app.getUI();
-            String cmdName = cmd.getCommandName();
-            String[] aliases = cmd.getCommandNameAliases();
-
-            jcb.addCommand(cmdName, cmd, aliases);
-        }
-
-        JCommander jc = jcb.build();
-        jc.parse(args);
-        return jc;
-    }
-
-    private String ensureP4FileOrDefault(String inputFile) throws IOException {
-        String p4FilePath; 
-        if (inputFile == null) {
-            System.out.println("warning: no P4 input file argument provided, using basic.p4");
-            p4FilePath = BASIC_P4;
-            // app.getUI().p4FilePath is left on null. this is consistent with not having user input.
+    private static LocalGremlinServer initGremlinServer(CLIArgsProvider cliArgs) throws LocalGremlinServerException {
+        LocalGremlinServer server;
+        AppUI ui = cliArgs.getInvokedAppUI();
+        if (ui.getActualDbLocation() == null) {
+            // Start the server in temporary mode.
+            server = new LocalGremlinServer();
         } else {
-            p4FilePath = App.absolutePath(inputFile);
+            server = new LocalGremlinServer(ui.getActualDbLocation(), ui.reset, ui.readonly);
         }
 
-        File p4File = new File(p4FilePath);
-
-        if (!p4File.exists()) {
-            throw new IllegalArgumentException("No file exists at " + p4FilePath);
-        }
-        if (!p4File.isFile()) {
-            throw new IllegalArgumentException(p4FilePath + " is not a file.");
-        }
-
-        return p4FilePath;
+        server.init();
+        return server;
     }
 
+    private static Feather initDI(CLIArgsProvider cli,P4FileService pfs, Map<Class<? extends Annotation>, Object> analysers,
+            LocalGremlinServer server)
+            throws LocalGremlinServerException, ClassNotFoundException, IOException, ReflectionException {
 
-    private static String ensurePersistingDirectoryExists(String databaseLocation, String p4FilePath) {
-        File f = new File(databaseLocation);
-        if (!f.exists()) {
-            throw new IllegalArgumentException("No directory found at " + absolutePath(databaseLocation));
-        }
-        if (!f.isDirectory()) {
-            throw new IllegalArgumentException(databaseLocation + " is not a directory");
-        }
+        AppUI ui = cli.getInvokedAppUI();
 
-        String psd = Paths.get(databaseLocation, p4FilePath).toString();
-        File psdf = new File(psd);
 
-        if (!psdf.exists() && !psdf.mkdirs()) { // short-circuit
-            throw new IllegalStateException("Unable to create directory at " + absolutePath(psd));
-        }
-
-        return psd;
-    }
-
-    private void initBrokerState() throws LocalGremlinServerException, ClassNotFoundException, IOException,
-            ReflectionException {
-
-        LocalGremlinServer server0;
-        Feather feather0;
-        if (persistingDirectory == null) {
-            // Start the server in in-memory mode.
-            server0 = new LocalGremlinServer();
-        } else {
-            server0 = new LocalGremlinServer(persistingDirectory, reset, readonly);
-        }
-
-        server0.init();
-        feather0 = createInjector(p4FilePath, invokedApp.getUI(), analysers, server0);
+        Feather feather = createInjector(cli, pfs, analysers, server);
 
         try {
             // Updates the injector object with the status of the completed dependencies.
-            if(!reset){
-                App.loadInjector(persistingDirectory, feather0);
+            if (!ui.reset) {
+                App.loadInjector(ui.getActualDbLocation(), feather);
             } else {
                 System.out.println("--reset argument found, not going to load existing database");
             }
@@ -343,14 +245,12 @@ public class App {
             // There is no file at the location yet.
             // This means nothing was done before, no need to update the injector.
         }
-        this.server = server0;
-        this.feather = feather0;
+        return feather;
     }
 
-
-    static String absolutePath(String relativePath)  {
+    public static String absolutePath(String relativePath) {
         File b = new File(relativePath);
-        
+
         try {
             return b.getCanonicalPath();
         } catch (IOException e) {
@@ -358,13 +258,12 @@ public class App {
         }
     }
 
-    private static Feather createInjector(String p4FilePath, AppUI cmdArgs, Map<Class<? extends Annotation>, Object> analysers,
-            LocalGremlinServer server)  {
-        P4FileService p4FileService = new P4FileService(p4FilePath, CORE_P4, V1MODEL_P4);
-        CLIArgsProvider cli = new CLIArgsProvider(cmdArgs);
+    private static Feather createInjector(CLIArgsProvider cli, P4FileService pfs, Map<Class<? extends Annotation>, Object> analysers,
+            LocalGremlinServer server) {
+
 
         Collection<Object> deps = new ArrayList<>();
-        deps.add(p4FileService);
+        deps.add(pfs);
         deps.add(cli);
         deps.add(server);
 
@@ -388,72 +287,55 @@ public class App {
         return cmds;
     }
 
-	public static void loadInjector(String persistentStatePath, Feather feather)
-			throws IOException, ReflectionException, ClassNotFoundException {
-	
-		XStream xstream = new XStream();
-		ObjectInputStream in = xstream
-				.createObjectInputStream(new FileInputStream(Paths.get(persistentStatePath, "state.xml").toString()));
-		Map<Key, Object> singletons = (Map) in.readObject();
-		in.close();
-	
-		try {
-			Field f = Feather.class.getDeclaredField("singletons");
-			f.setAccessible(true);
-	
-			f.set(feather, singletons);
-	
-			System.out.println("Deserialized the injector state: " + singletons);
-	
-		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
-			throw new ReflectionException(e);
-		}
-	}
+    public static void loadInjector(String persistentStatePath, Feather feather)
+            throws IOException, ReflectionException, ClassNotFoundException {
 
-    // NOTE: this is very hacky. 
-    //   for serialization, we tear the inner state of the injector from a private field and serialize that.  
-    //   for deserialization, we squeeze the inner state back to the private field of the injector. 
-	public static void saveInjector(String persistentStatePath, Feather feather) throws IOException,
-			ReflectionException {
-	
-		Map<Key, Object> singletons;
-		try {
-			Field f = Feather.class.getDeclaredField("singletons");
-			f.setAccessible(true);
-			singletons = (Map) f.get(feather);
-			singletons.remove(Key.of(GraphTraversalSource.class));
-		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
-			throw new ReflectionException(e);
-		}
-	
-	
-        Path statePath = Paths.get(persistentStatePath, "state.xml");
-        Files.deleteIfExists(statePath);
-		XStream xstream = new XStream();
-        ObjectOutputStream out = xstream.createObjectOutputStream(
-											new FileOutputStream(
-                                                    statePath.toString()));
-		out.writeObject(singletons);
-		out.close();
-		System.out.println("Serialized the injector state: " + singletons);
-	}
+        XStream xstream = new XStream();
+        ObjectInputStream in = xstream
+                .createObjectInputStream(new FileInputStream(Paths.get(persistentStatePath, "state.xml").toString()));
+        Map<Key, Object> singletons = (Map) in.readObject();
+        in.close();
 
-    private static Configuration loadClientConfig() {
-        Configuration c;
         try {
-            c = new PropertiesConfiguration(GREMLIN_CLIENT_CONF_PATH);
-        } catch (ConfigurationException e) {
-            throw new IllegalStateException(
-                    String.format(
-                        "Error parsing Gremlin client file at %s:", 
-                        GREMLIN_CLIENT_CONF_PATH),
-                    e);
+            Field f = Feather.class.getDeclaredField("singletons");
+            f.setAccessible(true);
+
+            f.set(feather, singletons);
+
+            System.out.println("Deserialized the injector state: " + singletons);
+
+        } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+            throw new ReflectionException(e);
+        }
+    }
+
+    // NOTE: this is very hacky.
+    // for serialization, we tear the inner state of the injector from a private
+    // field and serialize that.
+    // for deserialization, we squeeze the inner state back to the private field of
+    // the injector.
+    public static void saveInjector(String persistentStatePath, Feather feather)
+            throws IOException, ReflectionException {
+
+        Map<Key, Object> singletons;
+        try {
+            Field f = Feather.class.getDeclaredField("singletons");
+            f.setAccessible(true);
+            singletons = (Map) f.get(feather);
+            for (Class<?> clazz : DO_NOT_SERIALIZE) {
+                singletons.remove(Key.of(clazz));
+            }
+        } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+            throw new ReflectionException(e);
         }
 
-//      NOTE Unlike with YAML, we can use "classpath:" notation in .properties files, so it turned out we don't need this:
-//      c.setProperty("gremlin.remote.driver.clusterFile", GREMLIN_CLIENT_CONF_CLUSTERFILE_PATH);
-
-        return c;
+        Path statePath = Paths.get(persistentStatePath, "state.xml");
+        Files.deleteIfExists(statePath);
+        XStream xstream = new XStream();
+        ObjectOutputStream out = xstream.createObjectOutputStream(new FileOutputStream(statePath.toString()));
+        out.writeObject(singletons);
+        out.close();
+        System.out.println("Serialized the injector state: " + singletons);
     }
 
 }

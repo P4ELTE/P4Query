@@ -174,4 +174,30 @@ public class LocalGremlinServer {
         return f.getAbsolutePath();
     }
 
+// NOTE AnonymousTraversal accepts method parameters so this configuration file is not used currently. Leaving this here for future reference.
+//    
+//   import org.apache.commons.configuration.Configuration;
+//   import org.apache.commons.configuration.ConfigurationException;
+//   import org.apache.commons.configuration.PropertiesConfiguration;
+
+//   private static Configuration updateClientConfig() {
+//     GREMLIN_CLIENT_CONF_PATH = contentsToTempFile(
+//         loader.getResourceAsStream("conf/remote-graph.properties"), "conf/remote-graph.properties");
+//       Configuration c;
+//       try {
+//           c = new PropertiesConfiguration(GREMLIN_CLIENT_CONF_PATH);
+//       } catch (ConfigurationException e) {
+//           throw new IllegalStateException(
+//                   String.format(
+//                       "Error parsing Gremlin client file at %s:", 
+//                       GREMLIN_CLIENT_CONF_PATH),
+//                   e);
+//       }
+//
+//    // NOTE Unlike with YAML, we can use "classpath:" notation in .properties files, so it turned out we don't need this:
+//    private static String GREMLIN_CLIENT_CONF_PATH;
+//    // c.setProperty("gremlin.remote.driver.clusterFile", GREMLIN_CLIENT_CONF_CLUSTERFILE_PATH);
+//
+//       return c;
+//   }
 }
