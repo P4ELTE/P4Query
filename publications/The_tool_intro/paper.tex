@@ -265,15 +265,15 @@ This paper presents a framework allows the implementation of different analysis 
 The framework supports rapid implementation of new analysis methods applicable for P4 language in a way where results of the methods will be easily reusable. 
 
 	\section{Analysis framework}
-
-
 Traditional compilers are designed around passes: the frontend passes parse source code into an intermediate representation (IR), midend passes transforms and adds new information to the IR, and the backend passes create target-specific object code from the IR.  
-Modular compilers like P4C~\cite{p4c} improve this design by structuring the passes into a library: backends assemble their own frontends and midends from a catalogue of passes provided by the compiler. Moreover, P4C allows getting information from older states of the IR, as each transformation pass returns an immutable IR instance.
+Modular compilers like the P4 reference compiler P4C\footnote{\url{https://github.com/p4lang/p4c}} improve this design by structuring the passes into a library: backends assemble their own frontends and midends from a catalogue of passes provided by the compiler. Moreover, P4C allows getting information from older states of the IR, as each transformation pass returns an immutable IR instance.
 Even here, the three-fold separation of frontend-midend-backend have to remain: in order satisfy midend-dependencies, and subsequently, backend-dependencies, the backend must sequentially execute the frontend, the midend, and finally its own passes. 
 
 One goal of the experiment we present here is to relax the three-fold structure and allow passes to reuse (depend on) each other's functionally arbitrarily, and without burdening the compiler programmer with manually finding the right sequence in which to execute these dependencies.
 
-\subsection{Representation - Architecture}\label{sec:rep} % 4 hasáb - Dániel
+\clearpage
+
+\subsection{Tool architecture}\label{sec:rep} % 4 hasáb - Dániel
 	% belső gráf, a koncepció
 	% elemzések
 	% app megvalósítás
@@ -281,7 +281,7 @@ One goal of the experiment we present here is to relax the three-fold structure 
 
   \begin{figure}
     \includegraphics[width=0.18\textwidth]{figures/arch-top.pdf}
-    \caption{TODO}\label{fig:arch-top}
+    \caption{High-level view of the tool architecture}\label{fig:arch-top}
   \end{figure}
 
 Besides proposing a more relaxed structure of analysis passes, we had three additional goals in sight: support for different applications through uniform APIs, ease of extensibility, and data-driven programming.
@@ -295,7 +295,7 @@ Superficially, applications provide services to the user, by using the services 
 
   \begin{figure}
     \includegraphics[width=0.3\textwidth]{figures/arch-deps.pdf}
-    \caption{TODO}\label{fig:arch-deps}
+    \caption{Expanded view of the architecture layers}\label{fig:arch-deps}
   \end{figure}
 
 Our second design goal, \textit{ease of extensibility} is illustrated by Figure~\ref{fig:arch-deps}, that elaborates the application and infrastructure layers. 
@@ -330,8 +330,8 @@ In the tool architecture described in this section, we use a Gremlin graph datab
 The figure also partially includes domains of other analysers, such as \texttt{SYMBOL}. This analysers creates the graph-equivalent of a symbol table by identifying which declaration declares which name, and links usages of this name in the scope of the declaration to the declaration.
 
   \begin{figure}
-    \includegraphics[width=0.45\textwidth]{figures/output.pdf}
-    \caption{TODO}\label{fig:output}
+    \includegraphics[width=0.42\textwidth]{figures/output.pdf}
+    \caption{Knowledge graph excerpt of the Figure~\ref{code:P4} code}\label{fig:output}
   \end{figure}
 
 	\subsection{Testing}
