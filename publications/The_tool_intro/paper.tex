@@ -209,9 +209,6 @@ control MyDeparser(packet_out packet,
 	% egyéb toolok - Vera,  - Gabi
 	% Akár gremlin/gráf alapú dolgok, ami nem p4 (akár refactorerl) - mindenki
 	
-
-	\subsection{Similar tools}	
-	
 	%verification
 	
 	Considering related work there are many research applying specific analysis technics for P4. Most of them concentrate on error checking of P4 programs. For example Assert-P4 \cite{assertp4} and Vera \cite{vera} ask annotated P4 source from the developer and with symbolic execution they check if the predefined properties are correct during the program, although Vera can also detect common errors without annotations. P4V \cite{p4v} creates a formula, which describes the proper behavior of the program and checks the satisfiability of it with SMT solver. These tools are created for an earlier version of P4, namely P4$_\text{14}$. There are also verification tools, which can manage the newer version (P4$_\text{16}$) too. BF4 \cite{bf4} is created as a p4c backend, which can not only detect error possibilities, but it is able to repair them by adding new keys to the table and modify the table contents. An other tool p4-data-flow \cite{p4dataflow} uses data flow analysis to detect potential bugs in P4 switch codes.
@@ -325,24 +322,16 @@ The figure also partially includes domains of other analysers, such as \texttt{S
     \caption{TODO}\label{fig:output}
   \end{figure}
 
-	\subsection{Testing} % 1 hasáb - Gabi
-	There are two main goals with the testing: to test if the analyzes work well; and because it is a quite new tool, it will go through a lot of changes, therefore the possible spoils of the analyses during changes need to be detected. This version of the tool contains unit tests and integration tests to check the functional correctness. 
+	\subsection{Testing}
+	There are two main goals with the testing: to test if the analysers work well; and because it is a quite new tool, it will go through a lot of changes, therefore the possible spoils of the analysers during changes need to be detected. This version of the tool contains unit tests and integration tests to check the functional correctness. 
 	
-	With the unit tests, our main goal is to check if the analyzes work well. Unit tests need to be fast, therefore they work with the smallest part of the analyses ie. their functions. One function usually define one query of the graph, which insert new edges into it, therefore in these cases, the tests check if the right edges are added to the graph. Using actual P4 source, to test these functions, would be too costly, therefore we define the most simple graphs --, which contains only those edges and vertices, which are necessary for the query -- to check the function.
+	With the unit tests, our main goal is to check if the analysers work well. Unit tests need to be fast, therefore they work with smallest part of the analysers ie. their functions. One function usually define one query of the graph, which insert new edges into it, therefore in these cases, the tests check if the right edges are added to the graph. Using actual P4 source, to test these functions, would be too costly, therefore we define the most simple graphs --, which contains only those edges and vertices, which are necessary for the query -- to check the function.
 	
-	While unit tests need to be fast, integration tests can be slower, so we can use P4 files as the inputs to test the analyzes. When one analysis needs to be tested, it uses the P4 file, and executes every analysis, that it is based on and the tests will check the result of this running. The tests are predefined, therefore we use a file to store the information of the tested sources and analysis -- which file tests which analyzes with which test classes.
+	While unit tests need to be fast, integration tests can be slower, so we can use P4 files as the inputs to test the analysers. When one analyser needs to be tested, it uses the P4 file, and executes every analyser, that it is based on and the tests will check the result of this running. The tests are predefined, therefore we use a file to store the information of the tested sources and analyser -- which file tests which analysers and with which test classes.
 	
-	There are two approaches to run these tests. One of them executes all of the defined tests -- i.e. it goes through all of the P4 sources and executes the necessary analyzes and tests the their results -- which is useful to test the whole program and identify regression errors. The other focuses only one analysis and it is useful, when someone actually develop that analysis. This approach run only those tests which are relevant for the analysis.
+	There are two approaches to run these tests. One of them executes all of the defined tests -- i.e. it goes through all of the P4 sources and executes the necessary analysers and tests the their results -- which is useful to test the whole program and identify regression errors. The other focuses only one analyser and it is useful, when someone actually develop that analyser. This approach run only those tests which are relevant for the analyser.
 	
-	The architecture gives opportunity to insert the test as an application, which depends on all of the tested analyzes, but these are built into the maven. (TODO - ide még jöhetne talán részletessebben)
-	
-	
-	% külön modul
-	% elvi részei jelenlenek meg
-	% ilyen olyan teszt, messziről melyik hogy
-	% külön modul
-	% elvi részei jelenlenek meg
-	% ilyen olyan teszt, messziről melyik hogy
+	The architecture gives opportunity to insert the test as an application, which depends on all of the tested analysers, because it needs to test every analyser of the tool. 
 	
   \section{Case studies}\label{sec:apps} % ~ case studies?
 	
@@ -367,9 +356,9 @@ The subcommand \texttt{draw} tells <NAME> to run the visualiser on the file \tex
   \subsection{Verification} % 1 hasáb - Gabi
   Verification is a possible extension of the tool, which is added to it as an application. The main focus is to detect errors and suspicious cases, which can be caused by the usage of invalid header or uninitialized fields. The goal of this detection is to report these usages for the developer to avoid undefined behaviour in the programs. 
   
-  The approach of the checking is defined in our previous paper \cite{ownCheck}, but shortly, it calculates the pre-and post-condition of the different blocks -- i.e the control apply functions, the tables and actions --, the parser and the deparser of the program and based on their results it can detect improper usage of the fields and headers. Three types of cases can be detected: when there are some error cases in a block; when there is any inconsistency between the blocks; and when the need of the parser-deparser is inconsistent with the need of the control function.
+  The approach of the checking is defined in our previous paper \cite{ownCheck}, but shortly, it calculates the pre-and post-condition of the different blocks -- i.e the control apply functions, the tables and actions --, the parser and the deparser of the program, and based on these condition pairs it can detect improper usage of the fields and headers. Three types of cases can be detected: when there are some error cases in a block; when there is any inconsistency between the blocks; and when the need of the parser-deparser is inconsistent with the need of the control function.
   
-  In Figure \ref{code:cond}, there is an example condition for the MyIngress. We can see 4 pairs of conditions, because it has 4 possible execution paths - there are three when the condition of the branch is true, and the table executes one of the possible actions i.e. $\mathit{ipv4\_forward}$, $\mathit{drop}$ or $\mathit{NoAction}$, and one when the condition of the branch is false.
+  In Figure \ref{code:cond}, there is an example condition for the MyIngress. We can see 4 pairs of conditions because it has 4 possible execution paths - there are three where the condition of the branch is true, and the table executes one of the possible actions i.e. $\mathit{ipv4\_forward}$, $\mathit{drop}$ or $\mathit{NoAction}$, and one where the condition of the branch is false.
   
   \begin{figure}
   	\begin{lstlisting}[language=cond]
@@ -411,7 +400,8 @@ The subcommand \texttt{draw} tells <NAME> to run the visualiser on the file \tex
   	\label{code:cond}
   \end{figure}
   
-   This calculation is built into the tool as an application. It uses two experts: the call graph and control-flow graph. While traversing through the call graph it can reach calls of tables and actions. When it reaches a call, it starts to traverse through the proper subgraph of the control-flow graph and calculates the conditions of the actual block. Every condition is stored in the graph as a property of the called vertex of the call graph. 
+   This calculation is built into the tool as an application. It uses two experts: the call graph and the control-flow graph. While traversing backwards in the call graph it can reach actions and tables, which are called. Whenever it reaches a vertex like these, it starts to traverse through the proper subgraph of the control-flow graph and calculates the conditions of the actual block. Every condition is stored in the graph as a property of the called vertex of the call graph, therefore when the method reaches the actual call in the control-flow graph - for example a table is called in a control function - it can use the conditions of the called block, which have already been calculated.
+   
    The implementation gets and saves every information about the program with Gremlin queries.
   
   \subsection{Compiler} % 1 hasáb - Dániel
@@ -459,17 +449,13 @@ code:
   \label{code:stack}
 \end{figure}
   
-	\section{Conclusion and Future Work} % 1 hasáb - Máté
+	\section{Conclusion and Future Work}
 	
-	  The goal of this paper is to introduce our analysis framework for P4 programs, which is based on a huge graph representation of the program. Analysis can be easily inserted into the tool, as an expert, which calculates the proper side information from the main syntax tree, and also stores this new information in it. 
+	The goal of this paper is to introduce our static analysis framework for P4 programs, which uses a graph representation of the checked program. The tool is modular, therefore it can be extended with analysers to increase the possibilities of the program analysis. All of the analysers are based on the syntax tree of the examined P4 source and they extend it with new edges while creating new subgraphs -- like control-flow or call graph -- or new labels to store the calculated information.
+	 
+	So far, we have three main applications, which use some subgraph -- experts --, but we plan to increase these numbers and extend them. As an example, two near-future plans are the dependency graph and the def-use graph from which we could give some more useful information for the developers about their P4 source. The dependency graph will contain the data and control dependencies between the statements, the def-use graph will show which fields are defined and used in which statements. Based on these analyses we will be able to see more connection between the statements.		
 	
-	So far, we have three main applications, which use some subgraph -- experts --, but we plan to increase these numbers and extend them. Two near future plans are the dependency graph and the def-use graph from which we could give some more useful information for the developers about their P4 source. The dependency graph will contain the data and control dependencies between the statements, the def-use graph will show which fields are defined and used in which statements. Based on these analyzes we will be able to see more connection between the statements.		
-	
-	% talán még cost-analysis? slicing? refactor? error correction?	
-	
-	Our major purpose to create a tool, which can facilitate and support the work of  P4 developers.
-	
-
+	Our major purpose to create a tool, which can facilitate and support the work of  P4 developers while making the possibility to experiment with these programs. Its modular structure gives the opportunity for the user to avoid the usage of several tools for different analyses, although it makes the possibility to have all information in one place. 
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{tool}
