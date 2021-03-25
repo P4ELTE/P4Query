@@ -87,7 +87,8 @@ public class CallSitesImpl {
             // TODO couldn't check but the parameters are probably in reverse order
             g.V().or(__.has(Dom.Syn.V.CLASS, "FunctionPrototypeContext"),
                      __.has(Dom.Syn.V.CLASS, "ActionDeclarationContext"),
-                     __.has(Dom.Syn.V.CLASS, "PackageTypeDeclarationContext")).as("func")
+                     __.has(Dom.Syn.V.CLASS, "PackageTypeDeclarationContext"),
+                     __.has(Dom.Syn.V.CLASS, "ParserTypeDeclarationContext")).as("func")
              .outE(Dom.SYN).has(Dom.Syn.E.RULE, "parameterList").inV()
              .repeat(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "nonEmptyParameterList").inV())
              .emit()
@@ -97,7 +98,6 @@ public class CallSitesImpl {
              .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
              .addE(Dom.SITES).from("func")
              .property(Dom.Sites.ROLE, Dom.Sites.Role.HAS_PARAMETER)
-             
              .iterate();
         }
 
@@ -130,8 +130,5 @@ public class CallSitesImpl {
                      .iterate();
                 }
            }
-
-
-
         }
 }

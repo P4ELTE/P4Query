@@ -123,6 +123,7 @@ public class Dom {
             public static final String HAS_TYPE ="hasType";
             public static final String DECLARES_NAME ="declaresName";
             public static final String SCOPES ="scopes";
+            public static final String ALIASES_TYPE = "aliasesType";
         }
    }
 

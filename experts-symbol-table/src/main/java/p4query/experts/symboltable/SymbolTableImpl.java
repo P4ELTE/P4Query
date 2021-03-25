@@ -27,12 +27,16 @@ import org.codejargon.feather.Provides;
 import org.apache.tinkerpop.gremlin.process.traversal.step.util.BulkSet;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import javax.inject.Singleton;
 
 
+// TODO this module should be rewritten, espec. w.r.t. the "fix" prefixed methods 
 public class SymbolTableImpl 
 {
 
@@ -54,6 +58,12 @@ public class SymbolTableImpl
         tableApps(g);
         packageInstantiations(g);
         controlAndParserInstantiations(g);
+
+        fixBaseType(g);
+        fixTypedefs(g);
+        fixEnums(g);
+        fixMissingScopes(g);
+        fixGlobalConstantScopes(g);
 
         System.out.println(SymbolTable.class.getSimpleName() +" complete.");
         return new Status();
@@ -485,6 +495,261 @@ public class SymbolTableImpl
                     )
             .iterate();
                     
+    }
+
+
+    private void fixBaseType(GraphTraversalSource g) {
+        g.V().or(__.has(Dom.Syn.V.CLASS, "StructFieldContext"),
+                 __.has(Dom.Syn.V.CLASS, "ConstantDeclarationContext"))
+              .as("field")
+             .outE(Dom.SYN).has(Dom.Syn.E.RULE, "typeRef").inV()
+             .outE(Dom.SYN).has(Dom.Syn.E.RULE, "baseType").inV().as("baseType")
+             .addE(Dom.SYMBOL)
+             .property(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE)
+             .from("field").to("baseType")
+             .iterate();
+    }
+
+    // TODO currently only works for basetype typedefs
+    private static void fixTypedefs(GraphTraversalSource g) {
+        List<Map<String, Object>> decls =
+            g.V().has(Dom.Syn.V.CLASS, "TypedefDeclarationContext")
+                .project("decl", "type", "name")
+                .by(__.identity())
+                .by(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "typeRef").inV()
+                    .outE(Dom.SYN).has(Dom.Syn.E.RULE, "baseType").inV())
+                .by(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "name").inV()
+                    .repeat(__.outE(Dom.SYN).inV())
+                    .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")))
+                .toList();
+
+        List<Map<String, Object>> typeUsages =
+            g.E().hasLabel(Dom.SYMBOL)
+                 .has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE)
+                 .inV()
+                 .has(Dom.Syn.V.CLASS, "TerminalNodeImpl")
+                 .project("vert", "name")
+                 .by(__.identity())
+                 .by(__.values("value"))
+                 .toList();
+
+        // for faster lookup of terminalnodes by name
+        Map<String, List<Vertex>> typeUsagesByName = new HashMap<>();
+        for (Map<String,Object> map : typeUsages) {
+            Vertex vert = (Vertex) map.get("vert");
+            String name = (String) map.get("name");
+            
+            if(typeUsagesByName.containsKey(name)){
+                typeUsagesByName.get(name).add(vert);
+            } else {
+                LinkedList<Vertex> vs = new LinkedList<>();
+                vs.add(vert);
+                typeUsagesByName.put(name, vs);
+            }
+        }
+             
+        for (Map<String,Object> map : decls) {
+            Vertex decl = (Vertex) map.get("decl"); 
+            Vertex type = (Vertex) map.get("type"); 
+            Vertex nameNode = (Vertex) map.get("name"); 
+            String name = (String) g.V(nameNode).values("value").next();
+
+            g.addE(Dom.SYMBOL)
+                .property(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME)
+                .from(decl).to(nameNode)
+                .iterate();
+
+            g.addE(Dom.SYMBOL)
+                .property(Dom.Symbol.ROLE, Dom.Symbol.Role.ALIASES_TYPE)
+                .from(decl).to(type)
+                .iterate();
+
+            if(!typeUsagesByName.containsKey(name))
+                continue;
+
+            g.V(typeUsagesByName.get(name))
+             .addE(Dom.SYMBOL)
+             .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+             .from(decl)
+             .iterate();
+
+        }
+    }
+
+    private static void fixEnums(GraphTraversalSource g){
+
+        g.V().has(Dom.Syn.V.CLASS, "EnumDeclarationContext").as("enum")
+            .outE(Dom.SYN).has(Dom.Syn.E.RULE, "name")
+            .inV()
+            .repeat(__.outE(Dom.SYN).inV())
+            .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+            .addE(Dom.SYMBOL).from("enum")
+            .property(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME)
+            .iterate();
+
+        List<Map<String, Object>> enumNames = 
+            g.V().has(Dom.Syn.V.CLASS, "EnumDeclarationContext").as("enum")
+             .outE(Dom.SYMBOL)
+             .has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME)
+             .inV()
+             .values("value").as("name")
+             .select("enum", "name")
+             .toList();
+
+
+        for (Map<String,Object> m : enumNames) {
+            Vertex enu = (Vertex) m.get("enum");
+            String name = (String) m.get("name");
+
+            g.V().has(Dom.Syn.V.VALUE, name)
+                 .has(Dom.Syn.V.CLASS, "TerminalNodeImpl")
+                 .not(__.inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME))
+                 .addE(Dom.SYMBOL).from(enu)
+                 .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+                 .iterate();
+        }
+
+        List<Map<String, Object>> enumFieldNames = 
+            g.V().has(Dom.Syn.V.CLASS, "EnumDeclarationContext").as("enum")
+                .outE(Dom.SYN).has(Dom.Syn.E.RULE, "identifierList").inV()
+                .repeat(__.outE(Dom.SYN).inV())
+                .until(__.has(Dom.Syn.V.CLASS, "NameContext")).as("name")
+                .repeat(__.outE(Dom.SYN).inV())
+                .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+                .values("value").as("val")
+                .select("enum", "name", "val")
+                .toList();
+
+        for (Map<String,Object> m : enumFieldNames) {
+            Vertex enu = (Vertex) m.get("enum");
+            Vertex name = (Vertex) m.get("name");
+            String value = (String) m.get("val");
+
+            // TODO do an addition filter: only send the edge, if the lhs of the dot expression matches the enum name
+            g.V().has(Dom.Syn.V.VALUE, value)
+                 .has(Dom.Syn.V.CLASS, "TerminalNodeImpl")
+                 .not(__.inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES))
+                 .addE(Dom.SYMBOL).from(name)
+                 .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+                 .iterate();
+        }
+
+    }
+
+    // TODO add this to symbol table (this is the big query, maybe rewrite that to be like this fix)
+    // The RHS of 'hdr.ipv4.ttl = hdr.ipv4.ttl - 1;' in basic.p4 was not assigned scope-edges for some reason (bug). 
+    // This is just a local fix.
+    private static void fixMissingScopes(GraphTraversalSource g) {
+
+        List<Vertex> noScopes =
+            g.V().has(Dom.Syn.V.CLASS, "ExpressionContext")
+                .repeat(__.outE(Dom.SYN).inV())
+                .until(__.has(Dom.Syn.V.CLASS, "NameContext"))
+                .repeat(__.outE(Dom.SYN).inV())
+                .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+                .not(__.inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES))
+                .dedup()
+                .toList();
+
+        List<Vertex> topLevDots = 
+            g.V(noScopes)
+             .repeat(__.inE(Dom.SYN).outV())
+             .until(__.and(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "DOT"),
+                           __.inE(Dom.SYN).outV().not(__.has(Dom.Syn.E.RULE, "DOT"))))
+             .dedup()
+             .toList();
+
+        for (Vertex dotExpr : topLevDots) {
+            List<Vertex> fields = 
+                g.V(dotExpr) 
+                .repeat(__.outE(Dom.SYN)
+                          .not(__.has(Dom.Syn.E.RULE, "DOT"))
+                          .order().by(Dom.Syn.E.ORD, Order.desc) 
+                          .inV())
+                .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+                .toList();
+
+            Collections.reverse(fields);
+
+            Iterator<Vertex> it = fields.iterator();
+            Vertex first = it.next();
+
+            Vertex lastStruct = 
+                g.V(first)
+                .inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).outV()
+                .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE).inV()
+                .optional(
+                    __.inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).outV())
+                .next();
+
+            while(it.hasNext()){
+                Vertex current = it.next();
+                String fieldVal = (String) g.V(current).values("value").next();
+
+                // isValid is not declared anywhere in P4
+                if(fieldVal.equals("isValid")) 
+                    continue;
+
+                if(g.V(lastStruct).has(Dom.Syn.V.CLASS, "BaseTypeContext").hasNext()){
+                    g.addE(Dom.SYMBOL).from(lastStruct).to(current)
+                    .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+                    .iterate();
+                    continue;
+                }
+
+                Vertex correspStructField  =
+                    g.V(lastStruct)
+                     .repeat(__.outE(Dom.SYN)
+                               .order().by(Dom.Syn.E.ORD, Order.asc)
+                               .inV())
+                     .until(__.has(Dom.Syn.V.CLASS, "StructFieldContext")
+                              .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME)
+                              .inV()
+                              .has(Dom.Syn.V.VALUE, fieldVal))
+                     .next();
+
+                g.addE(Dom.SYMBOL).from(correspStructField).to(current)
+                 .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+                 .iterate();
+
+                lastStruct = 
+                    g.V(correspStructField)
+                    .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE)
+                    .inV()
+                    .optional(
+                        __.inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).outV())
+                    .next();
+            }
+
+            
+
+        }
+
+    }
+
+    private static void fixGlobalConstantScopes(GraphTraversalSource g) {
+        // note: this is copy-paste from fixEnum()
+
+        List<Map<String, Object>> names = 
+            g.V().has(Dom.Syn.V.CLASS, "ConstantDeclarationContext").as("const")
+             .outE(Dom.SYMBOL)
+             .has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME)
+             .inV()
+             .values("value").as("name")
+             .select("const", "name")
+             .toList();
+
+        for (Map<String,Object> m : names) {
+            Vertex enu = (Vertex) m.get("const");
+            String name = (String) m.get("name");
+
+            g.V().has(Dom.Syn.V.VALUE, name)
+                 .has(Dom.Syn.V.CLASS, "TerminalNodeImpl")
+                 .not(__.inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME))
+                 .addE(Dom.SYMBOL).from(enu)
+                 .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+                 .toList();
+        }
     }
 
 }

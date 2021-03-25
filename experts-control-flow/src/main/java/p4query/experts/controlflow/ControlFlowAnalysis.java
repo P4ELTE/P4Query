@@ -4,6 +4,11 @@
  */
 package p4query.experts.controlflow;
 
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import javax.inject.Singleton;
 
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
@@ -54,6 +59,8 @@ public class ControlFlowAnalysis {
             addParserEntry(g);
             addParserExit(g);
             addEntryExit(g);
+
+            quickfixSelectInCFG(g);
 
             System.out.println(ControlFlow.class.getSimpleName() +" complete.");
             return new Status();
@@ -266,5 +273,61 @@ public class ControlFlowAnalysis {
                 .property(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.RETURN)
                 .iterate();
         }
+
+
+    // TODO the specs (Section 11.6.) require triggering a runtime error if no cases match. the CFG requires exception-edges to handle this. (but no problem if the last pattern is 'default' or '_')
+    // TODO this should be merged into the main algorithm
+    // NOTE this introduces flows that go through each select case in order. (the original was sending special flows from the select expression top to select cases.) 
+    private void quickfixSelectInCFG(GraphTraversalSource g) {
+
+        // sets up flows to visit cases one by one. assumes that the select head pushes the head expression to the stack
+        List<Map<String, Object>> sels = 
+            g.V().has(Dom.Syn.V.CLASS, "SelectExpressionContext").as("sel")
+                 .map( 
+                    __.outE(Dom.CFG).has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FLOW)
+                      .order().by(Dom.Syn.E.ORD, Order.asc)
+                      .inV()
+                      .fold()).as("cases")
+                 .select("sel", "cases")
+                 .toList();
+
+        for (Map<String,Object> map : sels) {
+            Vertex sel = (Vertex) map.get("sel");
+
+            Collection<Vertex> cases = (Collection<Vertex>) map.get("cases");
+
+            // 1. delete flow edges from SelectExpression to SelectCases
+            g.V(cases).inE(Dom.CFG)
+             .has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FLOW)
+             .drop()
+             .iterate();
+
+            // 2. convert the flow from the SelectCase into a true-flow
+            g.V(cases).outE(Dom.CFG)
+                .has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FLOW)
+                .property(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.TRUE_FLOW)
+                .iterate();
+
+            // 3. set up false-flows between the SelectCases
+            Iterator<Vertex> it = cases.iterator();
+            if(!it.hasNext()) 
+                throw new IllegalStateException("select expression has no cases: " + sel);
+
+            Vertex caze = it.next();
+            while(it.hasNext()){
+                Vertex prevCaze = it.next();
+                g.addE(Dom.CFG).from(prevCaze).to(caze)
+                  .property(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FALSE_FLOW)
+                  .iterate();
+                caze = prevCaze;
+            }
+
+            // 4. add flow edge from SelectExpression to first SelectCase
+            g.addE(Dom.CFG).from(sel).to(caze)
+                .property(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FLOW)
+                .iterate();
+        }
+    }
+
 
 }
