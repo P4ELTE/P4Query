@@ -8,12 +8,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>p4analyser</artifactId>
-    <groupId>p4analyser</groupId>
+    <artifactId>p4query</artifactId>
+    <groupId>p4query</groupId>
     <version>1.0-SNAPSHOT</version>
   </parent>
 
-  <groupId>p4analyser</groupId>
+  <groupId>p4query</groupId>
   <artifactId>broker</artifactId>
   <version>1.0-SNAPSHOT</version>
 
@@ -53,40 +53,40 @@
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>ontology</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>blackboard</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>experts-visualisation</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>experts-call-graph</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>experts-symbol-table</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>experts-aliases</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
@@ -94,42 +94,42 @@
 
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>experts-syntax-tree</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>experts-tz-task6</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>experts-call-sites</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>experts-control-flow</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>experts-verification</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
 
     <dependency>
-      <groupId>p4analyser</groupId>
+      <groupId>p4query</groupId>
       <artifactId>experts-nr-task4</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>runtime</scope>
@@ -176,9 +176,9 @@
             <skip>false</skip>
             <!--
             <properties><projects>broker</projects></properties>
-            <properties><exec.mainClass>p4analyser.broker.App</exec.mainClass></properties>
+            <properties><exec.mainClass>p4query.broker.App</exec.mainClass></properties>
             -->
-            <mainClass>p4analyser.broker.App</mainClass>
+            <mainClass>p4query.broker.App</mainClass>
             <arguments>
               <argument>--help</argument>
             </arguments>

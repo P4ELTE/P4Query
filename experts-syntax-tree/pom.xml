@@ -8,12 +8,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>p4analyser</artifactId>
-    <groupId>p4analyser</groupId>
+    <artifactId>p4query</artifactId>
+    <groupId>p4query</groupId>
     <version>1.0-SNAPSHOT</version>
   </parent>
 
-  <groupId>p4analyser</groupId>
+  <groupId>p4query</groupId>
   <artifactId>experts-syntax-tree</artifactId>
   <version>1.0-SNAPSHOT</version>
 
@@ -69,7 +69,7 @@
 
 
         <dependency>
-          <groupId>p4analyser</groupId>
+          <groupId>p4query</groupId>
           <artifactId>ontology</artifactId>
           <version>1.0-SNAPSHOT</version>
         </dependency>
@@ -130,7 +130,7 @@
           <artifactId>antlr4-maven-plugin</artifactId>
           <version>4.8-1</version>
           <configuration>
-<!--              <outputDirectory>src/main/java/p4analyser/experts/syntaxtree/p4</outputDirectory> -->
+<!--              <outputDirectory>src/main/java/p4query/experts/syntaxtree/p4</outputDirectory> -->
               <visitor> true </visitor>
           </configuration>
           <executions>

@@ -21,7 +21,7 @@
 //#   downloaded from https://github.com/apache/tinkerpop/commit/06498eaa418e8cd1779cc421ad30f2f33899f2b3
 
 import org.apache.tinkerpop.gremlin.process.traversal.step.util.event.*
-import p4analyser.blackboard.P4KnowledgeGraphMutationListener;
+import p4query.blackboard.P4KnowledgeGraphMutationListener;
 
 // An example of an initialization script that can be configured to run in Gremlin Server.
 // Functions defined here will go into global cache and will not be removed from there
