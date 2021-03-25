@@ -42,6 +42,8 @@ public class CallSitesImpl {
             whichCallOwnsWhichArguments(g);
             whichFunctionOwnsWhichParameters(g);
             whichArgumentsInstantiateWhichParameters(g);
+
+            fixParserParameters(g); 
             return new Status();
         }
         
@@ -87,19 +89,32 @@ public class CallSitesImpl {
             // TODO couldn't check but the parameters are probably in reverse order
             g.V().or(__.has(Dom.Syn.V.CLASS, "FunctionPrototypeContext"),
                      __.has(Dom.Syn.V.CLASS, "ActionDeclarationContext"),
-                     __.has(Dom.Syn.V.CLASS, "PackageTypeDeclarationContext"),
-                     __.has(Dom.Syn.V.CLASS, "ParserTypeDeclarationContext")).as("func")
+                     __.has(Dom.Syn.V.CLASS, "ControlTypeDeclarationContext"),
+                     __.has(Dom.Syn.V.CLASS, "PackageTypeDeclarationContext")).as("func")
              .outE(Dom.SYN).has(Dom.Syn.E.RULE, "parameterList").inV()
              .repeat(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "nonEmptyParameterList").inV())
              .emit()
              .outE(Dom.SYN).has(Dom.Syn.E.RULE, "parameter").inV()
-             .outE(Dom.SYN).has(Dom.Syn.E.RULE, "name").inV()
-             .repeat(__.out(Dom.SYN))
-             .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+//             .outE(Dom.SYN).has(Dom.Syn.E.RULE, "name").inV()
+//             .repeat(__.out(Dom.SYN))
+//             .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
              .addE(Dom.SITES).from("func")
              .property(Dom.Sites.ROLE, Dom.Sites.Role.HAS_PARAMETER)
              .iterate();
         }
+
+        // TODO this should merged into whichFunctionOwnsWhichParameters
+        private static void fixParserParameters(GraphTraversalSource g) {
+            g.V().has(Dom.Syn.V.CLASS, "ParserTypeDeclarationContext").as("func")
+                .outE(Dom.SYN).has(Dom.Syn.E.RULE, "parameterList").inV()
+                .repeat(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "nonEmptyParameterList").inV())
+                .emit()
+                .outE(Dom.SYN).has(Dom.Syn.E.RULE, "parameter").inV()
+                .addE(Dom.SITES).from("func")
+                .property(Dom.Sites.ROLE, Dom.Sites.Role.HAS_PARAMETER)
+                .iterate();
+        }
+
 
         private static void whichArgumentsInstantiateWhichParameters(GraphTraversalSource g) {
 
