@@ -16,6 +16,7 @@
     <module>broker</module>
     <module>blackboard</module>
     <module>ontology</module>
+    <module>experts-smc</module>
     <module>experts-call-graph</module>
     <module>experts-syntax-tree</module>
     <module>experts-symbol-table</module>
