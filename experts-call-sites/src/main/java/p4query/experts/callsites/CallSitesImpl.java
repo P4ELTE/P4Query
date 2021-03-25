@@ -37,7 +37,6 @@ public class CallSitesImpl {
         @Singleton
         @CallSites
         public Status analyse(GraphTraversalSource g, @SyntaxTree Status s, @AbstractSyntaxTree Status a, @SymbolTable Status t){
-            System.out.println( "Not implemented yet!" );
             whichCallInvokesWhichFunction(g);
             whichCallOwnsWhichArguments(g);
             whichFunctionOwnsWhichParameters(g);
