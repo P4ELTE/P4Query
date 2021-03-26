@@ -234,7 +234,7 @@ control MyDeparser(packet_out packet,
 
   Recently, other works also leveraged graph databases for static analysis purposes. ProgQuery \cite{java-static} is a similar static analysis tool for Java, built on Neo4j and its Cypher query language. The authors emphasize that using Neo4j yielded substantial improvements in analysis time and memory usage. 
   
-  The expressive power of Gremlin is proved in another recent work~\cite{yamaguchi}: the authors store C code information in Neo4j, and define recurring vulnerability patterns as Gremlin queries. Using this apporach, the authors discovered 18 previously unknown vulnerabilities in the Linux kernel.
+  The expressive power of Gremlin is proved in another recent work~\cite{yamaguchi}: the authors store C code information in Neo4j, and define recurring vulnerability patterns as Gremlin queries. Using this approach, the authors discovered 18 previously unknown vulnerabilities in the Linux kernel.
 	
   %graph-based
   % - refactorerl
@@ -311,7 +311,7 @@ The information in the graph is regulated by a well-defined graph schema, and th
 Like this, programmers can almost completely avoid understanding the existing code base, and only have to look at and interact with the data in the graph.  
 
 \paragraph{Gremlin API}
-In the tool architecture described in this section, we use a Gremlin graph database as storage backend (knowledge graph). Gremlin is a compositional query language and API that is implemented by many large-scale graph databases. This makes it possible to change graph implementations with almost no modification to the P4Query code base. In earlier work~\cite{icai20}, we also profiled a few graph backends for control flow traverals, and verified that -- apart from the initial overhead -- in-memory graph databases have comparable performance to built-in memory manipulation. 
+In the tool architecture described in this section, we use a Gremlin graph database as storage backend (knowledge graph). Gremlin is a compositional query language and API that is implemented by many large-scale graph databases. This makes it possible to change graph implementations with almost no modification to the P4Query code base. In earlier work~\cite{icai20}, we also profiled a few graph backends for control flow traversals, and verified that -- apart from the initial overhead -- in-memory graph databases have comparable performance to built-in memory manipulation. 
 
   Another consequence is that analysers have to be implemented as graph query workflows. By coarsely granularizing queries, most of the work can be delegated to the database, and with this, the choice of the workflow language (e.g. Java) can become negligible. 
 (Although in our experience large queries can hinder code maintainability as these are often more difficult to read and modify.)
