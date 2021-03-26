@@ -99,7 +99,7 @@
 	\begin{abstract}
 		There are many important tasks in a conventional software development process which can be supported by different analysis techniques. P4 is a high level domain specific language for
 describing the data plane layer of packet processing algorithms. It has several uncommon language elements and concepts often make analysis of P4 programs a laborious task. 
-The paper presents P4Query, a generic analysis framework for P4 makes possible development of different P4 related analysis methods in a generic and modular way. The framework uses an integral graph representation which contains the results of applied analysis methods too. This way the framework supports rapid implementation of new analysis methods in a way where the results will be also easily reusable by other methods. 
+The paper presents P4Query, a generic analysis framework for P4 makes possible development of different P4 related analysis methods in a generic and modular way. The framework uses an internal graph representation which contains the abstract syntax tree of the analysed program and the results of applied analysis methods too. The framework supports rapid implementation of new analysis methods in a way where the results will be also easily reusable by other methods. 
 
 	\end{abstract}
 	
@@ -227,14 +227,11 @@ control MyDeparser(packet_out packet,
 	
 	Some other tools uses analysis methods for different purposes. For example p4pktgen \cite{p4pktgen} uses symbolic execution for automatically generating test cases. Flightplan \cite{flightplan} can splits a P4 program into a set of cooperating P4 programs and maps them to run as a distributed system formed of several, possibly heterogeneous, dataplanes. During this process they use several analysis technics, for example to gather variables whose values must be transfer between dataplanes. 
 
-	Comparing these approaches this paper presents a generic framework make possible to implement several analyses methods which can use each other's results as well. 
-	
-
-  A major inspiration for this work was RefactorErl~\cite{referl}, a static analysis tool for Erlang. RefactorErl stores program information in a graph called the Semantic Program Graph using relation databases, and hosts in own query language for exploring the stored information. Many features in our work -- such as using graph databases and their built-in query languages instead of in-house solutions -- can be considered to be the streamlining of best practices found in RefactorErl.
+	Comparing these approaches this paper presents a generic framework make possible to implement several analyses methods using a common basis. A major inspiration for this work was RefactorErl~\cite{referl}, a static analysis tool for Erlang. RefactorErl stores program information in a graph called the Semantic Program Graph using relation databases, and hosts in own query language for exploring the stored information. Many features in our work -- such as using graph databases and their built-in query languages instead of in-house solutions -- can be considered to be the streamlining of best practices found in RefactorErl.
 
   Recently, other works also leveraged graph databases for static analysis purposes. ProgQuery \cite{java-static} is a similar static analysis tool for Java, built on Neo4j and its Cypher query language. The authors emphasize that using Neo4j yielded substantial improvements in analysis time and memory usage. 
   
-  The expressive power of Gremlin is proved in another recent work~\cite{yamaguchi}: the authors store C code information in Neo4j, and define recurring vulnerability patterns as Gremlin queries. Using this approach, the authors discovered 18 previously unknown vulnerabilities in the Linux kernel.
+  For the manipulation of the internal graph representation we use the Gremlin language. The expressive power of Gremlin is proved in another recent work~\cite{yamaguchi}: the authors store C code information in Neo4j, and define recurring vulnerability patterns as Gremlin queries. Using this approach, the authors discovered 18 previously unknown vulnerabilities in the Linux kernel.
 	
   %graph-based
   % - refactorerl
@@ -256,11 +253,11 @@ control MyDeparser(packet_out packet,
 
   %% p4c is a factory. this tool is a laboratory. 
 
-P4 is a relatively new, domain specific language having some uncommon language elements (for example match-action tables). The language makes possible the description of the data plane layer of packet processing algorithms. However for a real execution also a corresponding control plane layer is needed, which part is more or less a black hole while we consider only the P4 source code. Because of these testing, verification and generally functional and non-functional analysis of P4 programs are non trivial tasks sometimes requiring language specific techniques.   
+P4 is a relatively new, domain specific language having some uncommon language elements (for example match-action tables). The language makes possible the description of the data plane layer of packet processing algorithms. However for a real execution also a corresponding control plane layer is needed, which part is more or less a black hole while we consider only the P4 source code. Because of these testing, verification and generally functional and non-functional analysis of P4 programs are non trivial tasks which sometimes require language specific techniques.   
 
 Section~\ref{sec:related} introduces several applications using different analysis methods for P4. The authors also have some earlier results for determining potentially erroneous code parts~\cite{ownCheck} and for predicting execution cost~\cite{LukacsOcs} of P4 programs. These methods usually require different analysis techniques, however these techniques often can have interleaving parts (for example creating an abstract syntax tree or a control flow graph).
 
-This paper presents a framework allows the implementation of different analysis methods using a common basis. The framework applies an extensible integral graph representation where the results of the different analysis methods are represented also as part of the graph. This makes possible execution of different methods in a hierarchical order where methods can use the results (or some part of the results) of previously applied methods. 
+This paper presents a framework allows the implementation of different analysis methods using a common basis. The framework applies an extensible internal graph representation where the results of the different analysis methods are represented also as part of the graph. This makes possible execution of different methods in a hierarchical order where methods can use the results (or some part of the results) of previously applied methods. 
 
 The framework supports rapid implementation of new analysis methods applicable for P4 language in a way where results of the methods will be easily reusable. 
 
@@ -270,8 +267,6 @@ Modular compilers like the P4 reference compiler P4C\footnote{\url{https://githu
 Even here, the three-fold separation of frontend-midend-backend have to remain: in order satisfy midend-dependencies, and subsequently, backend-dependencies, the backend must sequentially execute the frontend, the midend, and finally its own passes. 
 
 One goal of the experiment we present here is to relax the three-fold structure and allow passes to reuse (depend on) each other's functionally arbitrarily, and without burdening the compiler programmer with manually finding the right sequence in which to execute these dependencies.
-
-\clearpage
 
 \subsection{Tool architecture}\label{sec:rep} % 4 hasáb - Dániel
 	% belső gráf, a koncepció
