@@ -1,9 +1,7 @@
-Copyright 2020, Eötvös Loránd University.
-All rights reserved.
-
 # P4Query - Developer Guide
 
-## Contributing
+
+## Importing the project
 
 It should be possible to import the repository root as a folder in VSCode or [VSCodium](https://vscodium.com/).
 
@@ -73,7 +71,31 @@ $ java -jar p4query-jar-with-dependencies.jar
 $ java -jar p4query-jar-with-dependencies.jar "verify"
 ```
 
-### VSCode an Java 8
+### Updating license header
+
+:warning: **WARNING:** Automatically management of license headers requires unsupervised editing of most source files. Always issue these commands in a fresh clone, never on your actual working copy.
+
+License headers are managed through Maven by [Mycila's licensing plugin](https://github.com/mycila/license-maven-plugin).
+
+
+To add missing headers, execute from the project root: 
+
+```
+mvn license:format
+```
+
+The contents of the license header is read from [NOTICE.md](../NOTICE.md). 
+
+To update headers, execute from the project root: 
+
+```
+mvn license:format
+```
+
+The licensing plugin is configured in the root `pom.xml`, here you can issue e.g. which files no exclude from license stamping.
+
+
+### VSCode and Java 8
 
 The VSCode Java plugin requires Java 11 or newer, but projects can still be built using Java 8. 
 
@@ -87,7 +109,7 @@ Press `Ctrl+,` and in the "User" tab, search for `java.configuration.runtimes`. 
 }],
 ```
 
-After that issue an `mvn clean` and clean the workspace.
+After that, issue an `mvn clean` and clean the workspace.
 
 ### Gremlin
 
@@ -101,18 +123,16 @@ The P4 knowledge graph resides in a TinkerPop graph database. Database queries f
   * http://tinkerpop.apache.org/javadocs/3.4.8/full/org/apache/tinkerpop/gremlin/structure/package-summary.html
   * http://tinkerpop.apache.org/javadocs/3.4.8/full/org/apache/tinkerpop/gremlin/process/traversal/package-summary.html
 
-### Goals
-
-- **Open platform:** The P4 code analysis platform is intended as an open support structure for all implementations of optimising compilers, IDEs (incl. LSP-compliant ones), code comprehension dashboards, formal verification tools, etc. targeting the P4 programming language.
-- **Data-driven:** Don't work on the code, work on the data! It doesn't matter *how* a static analysis procedure delivers its results, as long as these results are correct. What matters is *what* information does it need, and *what* information does it provide. This information is easily visualised, verified, and built upon.
-- **Test-driven:** Clear input requirements and output guarantees are easy to turn into pre- and postconditions for testing and verification. A strong testing framework aids development both in validating new analysers and integrating validated analysers in the existing code base (CI/CD). 
-- **Knowledge-based:** Static analysis extracts new information from program code without executing the program code. In other words, any static analysis procedure is an intelligent expert inferring new facts from existing facts. At the end of the chain there is knowledge: useful information that can be easily processed by human experts (developers, engineers, and tech managers) and application-specific software.
-- **Graph-based:** Most data structures utilised in static analysis are trees and DAGs. Then, it makes sense to store all facts in one big, uniform, graph-shaped universe, where everything is connected to everything, and every information is just one link away. This universe is founded upon an efficient and multifaceted infrastructure provided by a state of the art graph database.
-- **Distributed:** Where and when static analysis queries are executed is constrained as little as possible. This enables concurrent query execution that, in turn, boosts availability and efficiency at the same time.
 
 ### Planned architecture
 
-![Figure: Planned architecture](../guides/figures/component.png)
+`p4query` has a layered architecture. End-users only interact with applications. Applications in turn interact with knowledge graph in the infrastructure layer.
+
+![Figure: Layers](../docs/figures/layers.png)
+
+Expanded view of the components:
+
+![Figure: Planned architecture](../docs/figures/component.png)
 
 
 ### Current code structure 
@@ -557,10 +577,6 @@ import org.junit.runners.Suite.SuiteClasses;
 public class YourClassNameAIT {
 }
 ```
-
-## Credits
-
-## License
 
 
 
