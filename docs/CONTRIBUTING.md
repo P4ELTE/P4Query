@@ -70,8 +70,10 @@ After that, issue an `mvn clean` and clean the workspace.
 
 `p4query` has a layered architecture. End-users only interact with applications. Applications in turn interact with knowledge graph in the infrastructure layer.
 
-![Figure: Layers](../docs/figures/layers.png)
-
+<figure>
+  <img src="../docs/figures/layers.png" width="40%">
+  <figcaption>Figure: High-level architecture</figcaption>
+</figure>
 
 ### Current code structure 
 
@@ -86,8 +88,10 @@ The code base is modular, and all modules are in the root directory (a requireme
 
 Expanded view of the components:
 
-![Figure: Planned architecture](../docs/figures/component.png)
-
+<figure>
+  <img src="../docs/figures/component.png" width="40%">
+  <figcaption>Figure: Component dependency (illustration)</figcaption>
+</figure>
 
 ### Gremlin
 
