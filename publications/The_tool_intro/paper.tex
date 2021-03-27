@@ -281,7 +281,7 @@ One goal of the experiment we present here is to relax the three-fold structure 
 
 Besides proposing a more relaxed structure of analysis passes, we had three additional goals in sight: support for different applications through uniform APIs, ease of extensibility, and data-driven programming.
 
-By \textit{supporting different applications} (or backends, in compiler parlance), we mean providing a comfortable way to to implement different end-users services, by reusing the same static code analysis operations.
+By \textit{supporting different applications} (or backends, in compiler parlance), we mean providing a comfortable way to implement different end-users services, by reusing the same static code analysis operations.
 See Section~\ref{sec:apps} for a few examples of applications built on top of the P4Query.
 In systems with uniform APIs, programmers have to learn only one paradigm to maintain, extend or otherwise alter the system (e.g. in case of P4C, visitors and passes are the main concepts of such a uniform API). 
 
@@ -294,7 +294,7 @@ Superficially, applications provide services to the user, by using the services 
   \end{figure}
 
 Our second design goal, \textit{ease of extensibility} is illustrated by Figure~\ref{fig:arch-deps}, that elaborates the application and infrastructure layers. 
-This arrangement was inspired by declarative build systems and the blackboard pattern used in distributed MI.
+This arrangement was inspired by declarative build systems and the blackboard pattern used in distributed AI.
 
 The infrastructure consists of a set of interdependent analyser components (or passes, in compiler parlance): higher-level analysers can only be executed when lower-level analysers already inserted the necessary knowledge into the graph. To achieve this, analyser components register their needs and provided services to the controller component, and the controller figures out the topological order in which to initiate the analysers. 
 Applications provide a user interface (e.g. command line interface) through which their services can be accessed, and similarly to analysers, applications also depend on a subset of the analysers in the infrastructure. But unlike analysers, application are expected to only read (never modify) the graph, and consequently, applications have no dependents. 
