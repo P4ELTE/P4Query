@@ -59,8 +59,8 @@ P4Query is licensed under the [Apache License, Version 2.0](LICENSE.txt).
 
 Authors:
 
-- [Gabriella Tóth](https://github.com/tothgabi/)
 - [Dániel Lukács](https://github.com/daniel-lukacs/)
+- [Gabriella Tóth](https://github.com/tothgabi/)
 - [Máté Tejfel](https://github.com/mate-tejfel)
 
 Acknowledgements:
