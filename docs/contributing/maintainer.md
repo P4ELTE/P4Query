@@ -54,7 +54,7 @@ The contents of the license header is read from [NOTICE.md](../NOTICE.md).
 To update headers, execute from the project root: 
 
 ```
-mvn license:format
+mvn license:update
 ```
 
 The licensing plugin is configured in the root `pom.xml`, here you can issue e.g. which files no exclude from license stamping.
