@@ -98,8 +98,8 @@
 	
 	\begin{abstract}
 		There are many important tasks in a conventional software development process which can be supported by different analysis techniques. P4 is a high level domain specific language for
-describing the data plane layer of packet processing algorithms. It has several uncommon language elements and concepts often make analysis of P4 programs a laborious task. 
-The paper presents P4Query, a generic analysis framework for P4 makes possible development of different P4 related analysis methods in a generic and modular way. The framework uses an internal graph representation which contains the abstract syntax tree of the analysed program and the results of applied analysis methods too. The framework supports rapid implementation of new analysis methods in a way where the results will be also easily reusable by other methods. 
+    describing the data plane layer of packet processing algorithms. It has several uncommon language elements and concepts that often make analysis of P4 programs a laborious task. 
+    The paper presents P4Query, a generic analysis framework for P4 that makes it possible to develop different P4 related analysis methods in a generic and modular way. The framework uses an internal graph representation which contains the abstract syntax tree of the analysed program and the results of applied analysis methods too. The framework supports rapid implementation of new analysis methods in a way where the results will be also easily reusable by other methods. 
 
 	\end{abstract}
 	
@@ -115,15 +115,15 @@ The paper presents P4Query, a generic analysis framework for P4 makes possible d
 	\maketitle
 	
 	\section{Introduction}
-	  Optimization, verification and refactoring are important tasks of a software development process. All of them can be effectively supported by static functional and non-functional (e.g. execution time estimation) analysis. These analysis can be especially interesting in the case of languages having uncommon language constructs or language structures e.g. in the case of some domain specific languages. 
+	  Optimization, verification and refactoring are important tasks of a software development process. All of them can be effectively supported by static functional and non-functional (e.g. execution time estimation) analysis. These analyses can be especially interesting in the case of languages having uncommon language constructs or language structures e.g. in the case of some domain specific languages. 
 	
 	
 	% P4 (max 1-1.5 hasáb) - példa (később használandó a többihez) - Máté
 	P4~\cite{p4paper} is a high level, domain-specific programming language. It is developed mainly for
 describing the data plane layer of packet processing algorithms of different network
-devices (e.g. switches, routers) in a protocol and target independent way. Figure~\ref{code:P4} illustrates a P4 program. The program first defines the applied header structure, than the parser part describes how the fields of the defined headers will be set from the input bit stream (input packet). Controller part can modify values of fields of headers and metadata by applying lookup tables. The data plane program describes the structure of the tables, the key fields based on that lookups will be executed and the possible results of the lookups, namely the applicable actions. However concrete data of the tables (which actions will be executed with which parameters for which key values) are defined by the control plane program, therefore it will not appear in P4. Finally the deparse part defines how the output bit stream (output packet) will be created from the headers.   
+devices (e.g. switches, routers) in a protocol and target independent way. Figure~\ref{code:P4} illustrates a P4 program. The program first defines the applied header structure, than the \texttt{parser} part describes how the fields of the defined headers will be set from the input bit stream (input packet). \texttt{control} parts can modify values of fields of headers and metadata by applying lookup tables. The data plane program describes the structure of the tables, the key fields on which lookups will be executed and the possible results of the lookups, namely the applicable actions. However concrete data of the tables (which actions will be executed with which parameters for which key values) are defined by the control plane program, therefore it will not appear in P4. Finally the deparse part defines how the output bit stream (output packet) will be created from the headers.   
 	
-	The paper describes an analysis framework for P4~\footnote{The code is available from: \url{https://github.com/P4ELTE/P4Query}}. The framework makes possible development of different P4 related analysis methods in a generic and modular way. It uses an internal graph representation where the results of the methods are also represented as part of the graph (mainly by adding new edges to the graph). In this way the methods can use each other's results as well. The proposed tool makes also possible to create rapid, prototype implementation of different analysis concepts using a common toolset.  
+The paper describes an analysis framework for P4~\footnote{The code is available from: \url{https://github.com/P4ELTE/P4Query}}. The framework makes it possible to develop different P4 related analysis methods in a generic and modular way. It uses an internal graph representation where the results of the methods are also represented as part of the graph (mainly by adding new edges to the graph). In this way the methods can use each other's results as well. The proposed tool also makes it possible to create rapid, prototype implementation of different analysis concepts using a common tool set.  
 
 
 \begin{figure*}
@@ -223,16 +223,15 @@ control MyDeparser(packet_out packet,
 	
 	%verification
 	
-	Considering related work there are many research applying specific analysis technics for P4. Most of them concentrate on error checking of P4 programs. For example Assert-P4 \cite{assertp4} and Vera \cite{vera} ask annotated P4 source from the developer and with symbolic execution they check if the predefined properties are correct during the program, although Vera can also detect common errors without annotations. P4V \cite{p4v} creates a formula, which describes the proper behavior of the program and checks the satisfiability of it with SMT solver. These tools are created for an earlier version of P4, namely P4$_\text{14}$. There are also verification tools, which can manage the newer version (P4$_\text{16}$) too. BF4 \cite{bf4} is created as a p4c backend, which can not only detect error possibilities, but it is able to repair them by adding new keys to the table and modify the table contents. An other tool p4-data-flow \cite{p4dataflow} uses data flow analysis to detect potential bugs in P4 switch codes.
+  There is already much research on applying specific analysis techniques for P4. Most of them concentrate on error checking of P4 programs. For example Assert-P4 \cite{assertp4} and Vera \cite{vera} ask annotated P4 source from the developer and with symbolic execution they check if the predefined properties are correct during the program, although Vera can also detect common errors without annotations. P4V \cite{p4v} creates a formula, which describes the proper behavior of the program and checks the satisfiability of it with SMT solver. These tools are created for an earlier version of P4, namely P4$_\text{14}$. There are also verification tools, which can manage the newer version (P4$_\text{16}$) too. BF4 \cite{bf4} is created as a p4c backend, which can not only detect error possibilities, but it is able to repair them by adding new keys to the table and modify the table contents. Another tool, p4-data-flow \cite{p4dataflow} uses data flow analysis to detect potential bugs in P4 switch codes.
 	
-	Some other tools uses analysis methods for different purposes. For example p4pktgen \cite{p4pktgen} uses symbolic execution for automatically generating test cases. Flightplan \cite{flightplan} can splits a P4 program into a set of cooperating P4 programs and maps them to run as a distributed system formed of several, possibly heterogeneous, dataplanes. During this process they use several analysis technics, for example to gather variables whose values must be transfer between dataplanes. 
+  Some other tools use analysis methods for different purposes. For example, p4pktgen \cite{p4pktgen} uses symbolic execution for automatically generating test cases. Flightplan \cite{flightplan} can split a P4 program into a set of cooperating P4 programs and maps them to run as a distributed system formed of several, possibly heterogeneous, dataplanes. During this process they use several analysis techniques, for example to gather variables whose values must be transferred between data planes. 
 
-	Comparing these approaches this paper presents a generic framework make possible to implement several analyses methods using a common basis. A major inspiration for this work was RefactorErl~\cite{referl}, a static analysis tool for Erlang. RefactorErl stores program information in a graph called the Semantic Program Graph using relation databases, and hosts in own query language for exploring the stored information. Many features in our work -- such as using graph databases and their built-in query languages instead of in-house solutions -- can be considered to be the streamlining of best practices found in RefactorErl.
+  Comparing these approaches this paper presents a generic framework to make it possible to implement several analyses methods using a common basis. A major inspiration for this work was RefactorErl~\cite{referl}, a static analysis tool for Erlang. RefactorErl stores program information in a graph called the Semantic Program Graph using relational databases, and hosts its own query language for exploring the stored information. Many features in our work -- such as using graph databases and graph query languages instead of in-house solutions -- can be considered to be the streamlining of best practices found in RefactorErl.
 
-  Recently, other works also leveraged graph databases for static analysis purposes. ProgQuery \cite{java-static} is a similar static analysis tool for Java, built on Neo4j and its Cypher query language. The authors emphasize that using Neo4j yielded substantial improvements in analysis time and memory usage. 
+  Recently, other works also leveraged graph databases for static analysis purposes. ProgQuery \cite{java-static} is a similar static analysis tool for Java, built on Neo4j and its Cypher query language. The authors emphasise that using Neo4j yielded substantial improvements in analysis time and memory usage. In fact, the name of our own tool was patterned after ProgQuery.
   
-  For the manipulation of the internal graph representation we use the Gremlin language. The expressive power of Gremlin is proved in another recent work~\cite{yamaguchi}: the authors store C code information in Neo4j, and define recurring vulnerability patterns as Gremlin queries. Using this approach, the authors discovered 18 previously unknown vulnerabilities in the Linux kernel.
-	
+  One design goal of our tool is to welcome Gremlin-based static analysis applications for P4. The expressive power of Gremlin is proved in another recent work~\cite{yamaguchi}: the authors store C code information in Neo4j, and define recurring vulnerability patterns as Gremlin queries. Using this approach, the authors discovered 18 previously unknown vulnerabilities in the Linux kernel. 
   %graph-based
   % - refactorerl
   
@@ -243,26 +242,22 @@ control MyDeparser(packet_out packet,
   % - Efficient and Flexible Discovery of PHP Application Vulnerabilities: https://fabs.codeminers.org/papers/2017b-eurosp.pdf
   % -  Modeling and Discovering Vulnerabilities with Code Property Graphs: https://fabs.codeminers.org/papers/2014-ieeesp.pdf , slides: http://mlsec.org/joern/docs/2014-inbot.pdf
   % - Reverse Engineering State and Strategy Design Patterns using Static Code Analysis: https://thesai.org/Downloads/Volume9No1/Paper_78-Reverse_Engineering_State_and_Strategy_Design_Patterns.pdf
-
-
 	\section{Motivation}
 	% max 1 hasáb - lehet intorba megy - Máté
 	% p4-re vannak elemzések kéne fejlesztés segítő eszköz
 	% ehhez egységes keretrendszer - vannak már ilyesmik related workben
-	
-
+  %
   %% p4c is a factory. this tool is a laboratory. 
-
+  %
 P4 is a relatively new, domain specific language having some uncommon language elements (for example match-action tables). The language makes possible the description of the data plane layer of packet processing algorithms. However for a real execution also a corresponding control plane layer is needed, which part is more or less a black hole while we consider only the P4 source code. Because of these testing, verification and generally functional and non-functional analysis of P4 programs are non trivial tasks which sometimes require language specific techniques.   
 
-Section~\ref{sec:related} introduces several applications using different analysis methods for P4. The authors also have some earlier results for determining potentially erroneous code parts~\cite{ownCheck} and for predicting execution cost~\cite{LukacsOcs} of P4 programs. These methods usually require different analysis techniques, however these techniques often can have interleaving parts (for example creating an abstract syntax tree or a control flow graph).
+Section~\ref{sec:apps} introduces several applications using different analysis methods for P4. The authors also have some earlier results for determining potentially erroneous code parts~\cite{ownCheck} and for predicting execution cost~\cite{LukacsOcs} of P4 programs. These methods usually require different analysis techniques, however these techniques often can have interleaving parts (for example creating an abstract syntax tree or a control flow graph).
 
-This paper presents a framework allows the implementation of different analysis methods using a common basis. The framework applies an extensible internal graph representation where the results of the different analysis methods are represented also as part of the graph. This makes possible execution of different methods in a hierarchical order where methods can use the results (or some part of the results) of previously applied methods. 
-
+This paper presents a framework that allows the implementation of different analysis methods using a common basis. The framework applies an extensible internal graph representation where the results of the different analysis methods are represented also as part of the graph. This makes it possible to execute different methods in a hierarchical order where methods can use the results (or some part of the results) of previously applied methods. 
 The framework supports rapid implementation of new analysis methods applicable for P4 language in a way where results of the methods will be easily reusable. 
 
 	\section{Analysis framework}
-Traditional compilers are designed around passes: the frontend passes parse source code into an intermediate representation (IR), midend passes transforms and adds new information to the IR, and the backend passes create target-specific object code from the IR.  
+Traditional compilers are designed around passes: the frontend passes parse source code into an intermediate representation (IR), midend passes transform and add new information to the IR, and the backend passes create target-specific object code from the IR.  
 Modular compilers like the P4 reference compiler P4C\footnote{\url{https://github.com/p4lang/p4c}} improve this design by structuring the passes into a library: backends assemble their own frontends and midends from a catalogue of passes provided by the compiler. Moreover, P4C allows getting information from older states of the IR, as each transformation pass returns an immutable IR instance.
 Even here, the three-fold separation of frontend-midend-backend have to remain: in order satisfy midend-dependencies, and subsequently, backend-dependencies, the backend must sequentially execute the frontend, the midend, and finally its own passes. 
 
@@ -285,7 +280,7 @@ By \textit{supporting different applications} (or backends, in compiler parlance
 See Section~\ref{sec:apps} for a few examples of applications built on top of the P4Query.
 In systems with uniform APIs, programmers have to learn only one paradigm to maintain, extend or otherwise alter the system (e.g. in case of P4C, visitors and passes are the main concepts of such a uniform API). 
 
-Figure~\ref{fig:arch-top} depicts how the architecture of P4Query realizes uniform APIs by relying on a graph database. 
+Figure~\ref{fig:arch-top} depicts how the architecture of P4Query realises uniform APIs by relying on a graph database. 
 Superficially, applications provide services to the user, by using the services provided by the infrastructure (see Section~\ref{sec:infra}). In reality, both the infrastructure and applications operate on a large shared graph that collects all our knowledge about the program code. The graph is also exposed to the user to enable custom features (e.g. to attach external loggers, visualisers, and validators). The information in the knowledge graph is accessed using graph queries written in Gremlin. The implication is that users, application developers, and infrastructure developers are using one, uniform data structure, and are accessing it using the same mechanism. The seamless collaboration of all these components is managed by the controller component.
 
   \begin{figure}
@@ -308,11 +303,9 @@ Like this, programmers can almost completely avoid understanding the existing co
 \paragraph{Gremlin API}
 In the tool architecture described in this section, we use a Gremlin graph database as storage backend (knowledge graph). Gremlin is a compositional query language and API that is implemented by many large-scale graph databases. This makes it possible to change graph implementations with almost no modification to the P4Query code base. In earlier work~\cite{icai20}, we also profiled a few graph backends for control flow traversals, and verified that -- apart from the initial overhead -- in-memory graph databases have comparable performance to built-in memory manipulation. 
 
-  Another consequence is that analysers have to be implemented as graph query workflows. By coarsely granularizing queries, most of the work can be delegated to the database, and with this, the choice of the workflow language (e.g. Java) can become negligible. 
+  Another consequence is that analysers have to be implemented as graph query workflows. By coarsely granularising queries, most of the work can be delegated to the database, and with this, the choice of the workflow language (e.g. Java) can become negligible. 
 (Although in our experience large queries can hinder code maintainability as these are often more difficult to read and modify.)
 % In earlier work~\cite{macs20}, we experimented with implementing a whole control flow analysis as a single graph query: while having advantages, it can also hinder code maintainability as queries are often more difficult to read and modify. 
-
-	
   \subsection{Infrastructure}\label{sec:infra} % 1 hasáb - Dániel
 	% kisebb gráf ábra
   As we see earlier in Figure~\ref{fig:arch-deps}, the heavy-lifting in P4Query is done by various code analyser components, each adding new information about the P4 code to the knowledge graph using what is already there. We now introduce a few analyser modules using an example: Figure~\ref{fig:output} depicts a small subset of the knowledge graph taken after we executed control flow analysis, call analysis, and call sites analysis on the P4 code in Figure~\ref{code:P4} (specifically the \texttt{MyIngress} control). 
@@ -352,18 +345,18 @@ The figure also partially includes domains of other analysers, such as \texttt{S
 
 	\subsection{Visualisation} % 0.5 hasáb
   
-  Since it is the easiest to understand, the first application we introduce is graph visualisation. This application expects a list of analyser component names, executes them, and then, prints a subgraph of the knowledge graph containing only the domains of the analysers in the list. For example, to print the full version of the graph in Figure~\ref{fig:output}, we should execute P4Query with the following arguments:
+  Since it is the easiest to understand, the first application we introduce is graph visualisation. This application expects a list of analyser component names, executes them, and then, prints a subgraph of the knowledge graph containing only the domains of the analysers in the list. For example, to print the full version of the graph in Figure~\ref{fig:output}, we would execute P4Query with the following arguments:
   \begin{lstlisting}[language=bash, basicstyle=\footnotesize]
 $ p4query draw example.p4 -A CFG SYMBOL CALL SITES AST 
 \end{lstlisting}
 The subcommand \texttt{draw} tells P4Query to run the visualiser on the file \texttt{example.p4}, while \texttt{-A} is a flag (defined by the visualiser UI) expects the analyser names that will be passed to the visualiser application. 
 
-  A possibly interesting implementation detail here is that the visualiser technically depends on \textit{all} the analysers defined in P4Query, since it must be able to visualise anything the user may pass. Yet, we still managed to avoid executing those that are not requested by the user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initialization of the dependencies. This way we can filter the analysers and only initialize those that were requested by the user.
+  A possibly interesting implementation detail here is that the visualiser technically depends on \textit{all} the analysers defined in P4Query, since it must be able to visualise anything the user may pass. Yet, we still managed to avoid executing those that are not requested by the user (and not dependencies of the requested ones): we implemented dependency resolution in the controller using Java dependency injection (DI), and DI offers lazy initialization of the dependencies. This way we can filter the analysers and only initialise those that were requested by the user.
 
   \subsection{Verification} % 1 hasáb - Gabi
-  Verification is a possible extension of the tool, which is added to it as an application. The main focus is to detect errors and suspicious cases, which can be caused by the usage of invalid header or uninitialized fields. The goal of this detection is to report these usages for the developer to avoid undefined behaviour in the programs. 
+  Verification is a possible extension of the tool, which is added to it as an application. The main focus is to detect errors and suspicious cases, which can be caused by the usage of invalid header or uninitialised fields. The goal of this detection is to report these usages for the developer to avoid undefined behaviour in the programs. 
   
-  The approach of the checking is defined in our previous paper \cite{ownCheck}, but shortly, it calculates the pre-and post-condition of the different blocks -- i.e the control apply functions, the tables and actions --, the parser and the deparser of the program, and based on these condition pairs it can detect improper usage of the fields and headers. Three types of cases can be detected: when there are some error cases in a block; when there is any inconsistency between the blocks; and when the need of the parser-deparser is inconsistent with the need of the control function.
+  The approach of the checking is defined in our previous paper \cite{ownCheck}, but in short, it calculates the pre- and post-condition of the various blocks -- i.e the control apply functions, the tables and actions --, the parser and the deparser of the program. Based on these condition pairs it can detect improper usage of the fields and headers. Three types of cases can be detected: when there are some error cases in a block; when there is any inconsistency between the blocks; and when the need of the parser and deparser is inconsistent with the need of the control function.
   
   In Figure \ref{code:cond}, there is an example condition for the MyIngress. We can see 4 pairs of conditions because it has 4 possible execution paths - there are three where the condition of the branch is true, and the table executes one of the possible actions i.e. $\mathit{ipv4\_forward}$, $\mathit{drop}$ or $\mathit{NoAction}$, and one where the condition of the branch is false.
   
@@ -407,7 +400,7 @@ The subcommand \texttt{draw} tells P4Query to run the visualiser on the file \te
   	\label{code:cond}
   \end{figure}
   
-   This calculation is built into the tool as an application. It uses two experts: the call graph and the control-flow graph. While traversing backwards in the call graph it can reach actions and tables, which are called. Whenever it reaches a vertex like these, it starts to traverse through the proper subgraph of the control-flow graph and calculates the conditions of the actual block. Every condition is stored in the graph as a property of the called vertex of the call graph, therefore when the method reaches the actual call in the control-flow graph - for example a table is called in a control function - it can use the conditions of the called block, which have already been calculated.
+  This calculation is built into the tool as an application. It uses two analysers: the call graph and the control flow graph. While traversing backwards in the call graph it can reach actions and tables, which are called. Whenever it reaches a vertex like these, it starts to traverse through the proper subgraph of the control flow graph and calculates the conditions of the actual block. Every condition is stored in the graph as a property of the called vertex of the call graph, therefore when the method reaches the actual call in the control flow graph -- for example when a table is called in a control function -- it can use the conditions of the called block, which have already been calculated.
    
    The implementation gets and saves every information about the program with Gremlin queries.
   
@@ -458,11 +451,16 @@ code:
   
 	\section{Conclusion and Future Work}
 	
-	Our major purpose to create a tool, which can facilitate and support the work of  P4 developers while making the possibility to experiment with these programs. Its modular structure gives the opportunity for the user to avoid the usage of several tools for different analyses, although it makes the possibility to have all information in one place. 
+  Our major purpose was to create a tool, which can facilitate and support the work of P4 developers while making the possibility to experiment with these programs. Its modular structure gives the opportunity for the user to avoid the usage of several tools for different analyses, as it makes it possible to have all information in one place. 
 	
-	The framework uses a graph representation of the investigated program. All of the analysers are based on the syntax tree of the examined P4 source and they extend it with new edges while creating new subgraphs -- like control-flow or call graph -- or new labels to store the calculated information.
+	The framework uses a graph representation of the investigated program. All of the analysers are based on the syntax tree of the examined P4 source and they extend it with new edges while creating new subgraphs -- like control flow or call graph -- or new labels to store the calculated information.
 	 
 	In the future, we would like to extend the tool with new analyses to give some other useful information for the developers about their P4 source. Our nearest idea is to supplement it with the dependency graph and def-use graph with which we will be able to give report, which are based on the connection between the statements.		
+
+%% future work: like in traditional compilers, parallelizing analysers. graph is shared data. 
+%% On one hand, the architecture supports parallelization by requiring analysers to explicitly state their dependencies and provided services, enabling us to easily select which analyers to execute parallely (the independent ones). On the other hand, the architecture does not conceptualise the *effects* caused by analysers. An analyser can alter the graph in such a way that causes some other -- theoretically indepedent -- analyser to take an unexpected route, leading to wrong results. Such an implementation error will be catched by the tests in sequential execution, but not necessarily in parallel execution.
+
+%% stricter type system
 
 \begin{acks}
 The research has been supported by the European Union, co-financed by the European Social Fund 
