@@ -17,16 +17,12 @@
 package p4query.applications.smc.hir;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import p4query.applications.smc.hir.exprs.P4StorageReference;
 import p4query.applications.smc.hir.typing.Composite;
-import p4query.applications.smc.hir.typing.GlobalStruct;
 import p4query.applications.smc.hir.typing.IRType;
 
 // NOTE in P4 structs declaration also initializes, so struct types and struct names are the same

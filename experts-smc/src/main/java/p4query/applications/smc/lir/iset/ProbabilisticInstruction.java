@@ -16,8 +16,6 @@
  */
 package p4query.applications.smc.lir.iset;
 
-import java.io.PrintStream;
-import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;

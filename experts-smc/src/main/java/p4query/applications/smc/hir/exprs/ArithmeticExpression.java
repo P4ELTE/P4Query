@@ -28,20 +28,15 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 import p4query.applications.smc.hir.Definition;
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.LocalMemoryLayout;
-import p4query.applications.smc.hir.ProcedureDefinition;
 import p4query.applications.smc.hir.typing.IRType;
 import p4query.applications.smc.hir.typing.IRType.SingletonFactory;
 import p4query.applications.smc.lir.iset.Comment;
 import p4query.applications.smc.lir.iset.Const;
 import p4query.applications.smc.lir.iset.Invoke;
-import p4query.applications.smc.lir.iset.Load;
 import p4query.applications.smc.lir.iset.Pop;
 import p4query.applications.smc.lir.iset.StackInstruction;
-import p4query.applications.smc.lir.iset.Store;
-import p4query.applications.smc.lir.typing.LocalAddress;
 import p4query.applications.smc.lir.typing.Size;
 import p4query.applications.smc.lir.typing.UnresolvedNameLabel;
-import p4query.applications.smc.lir.typing.UnresolvedVertexLabel;
 import p4query.ontology.Dom;
 
 public class ArithmeticExpression implements Expression {

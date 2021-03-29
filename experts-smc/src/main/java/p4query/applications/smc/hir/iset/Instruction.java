@@ -16,28 +16,18 @@
  */
 package p4query.applications.smc.hir.iset;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.LocalMemoryLayout;
 import p4query.applications.smc.hir.ProcedureDefinition;
-import p4query.applications.smc.hir.exprs.ArithmeticExpression;
-import p4query.applications.smc.hir.exprs.Expression;
-import p4query.applications.smc.hir.exprs.LiteralExpression;
-import p4query.applications.smc.hir.exprs.P4StorageReference;
-import p4query.applications.smc.hir.exprs.CustomStorageReference;
-import p4query.applications.smc.hir.exprs.StorageReference;
 import p4query.applications.smc.hir.typing.IRType;
-import p4query.applications.smc.lir.iset.Comment;
 import p4query.applications.smc.lir.iset.StackInstruction;
 import p4query.ontology.Dom;
 

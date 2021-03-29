@@ -1,27 +1,20 @@
 package p4query.applications;
 
-import com.beust.jcommander.Parameter;
-import com.beust.jcommander.Parameters;
-
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.codejargon.feather.Provides;
-
 import java.io.File;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
-import javax.inject.Singleton;
 
-import p4query.ontology.providers.Application;
-import p4query.ontology.providers.AppUI;
-import p4query.ontology.providers.P4FileProvider.InputP4File;
-import p4query.ontology.analyses.SyntaxTree;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
+
 import p4query.ontology.Dom;
 import p4query.ontology.Status;
+import p4query.ontology.analyses.SyntaxTree;
+import p4query.ontology.providers.AppUI;
+import p4query.ontology.providers.Application;
+import p4query.ontology.providers.P4FileProvider.InputP4File;
 
 public class App implements Application {
 

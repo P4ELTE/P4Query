@@ -18,7 +18,6 @@ package p4query.applications.smc.hir;
 
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;

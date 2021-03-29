@@ -16,29 +16,18 @@
  */
 package p4query.experts.syntaxtree;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.RuleContext;
 import org.antlr.v4.runtime.Vocabulary;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
-import org.antlr.v4.runtime.tree.RuleNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
-import org.apache.tinkerpop.gremlin.process.traversal.Traverser;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
-import org.w3c.dom.Element;
 
 import p4query.experts.syntaxtree.p4.P4BaseListener;
-import p4query.experts.syntaxtree.p4.P4BaseVisitor;
-
 import p4query.ontology.Dom;
 
 public class TinkerGraphParseTree {

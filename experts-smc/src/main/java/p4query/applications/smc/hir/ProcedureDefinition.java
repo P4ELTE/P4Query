@@ -17,7 +17,6 @@
 package p4query.applications.smc.hir;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,9 +26,7 @@ import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSo
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
-import p4query.applications.smc.hir.exprs.CustomStorageReference;
 import p4query.applications.smc.hir.iset.Instruction;
-import p4query.applications.smc.hir.iset.ProcedureDone;
 import p4query.applications.smc.hir.typing.IRType;
 import p4query.applications.smc.hir.typing.LocalStruct;
 import p4query.applications.smc.lir.iset.Comment;

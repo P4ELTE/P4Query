@@ -16,53 +16,52 @@
  */
 package p4query.experts.controlflow;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import javax.lang.model.util.ElementScanner6;
-
-import org.apache.tinkerpop.gremlin.process.traversal.P;
-import org.apache.tinkerpop.gremlin.process.traversal.Pop;
-import org.apache.tinkerpop.gremlin.process.traversal.Step;
-import org.apache.tinkerpop.gremlin.process.traversal.Traversal;
-import org.apache.tinkerpop.gremlin.process.traversal.Traversal.Admin;
-import org.apache.tinkerpop.gremlin.process.traversal.lambda.ElementValueTraversal;
-import org.apache.tinkerpop.gremlin.process.traversal.lambda.TokenTraversal;
-import org.apache.tinkerpop.gremlin.process.traversal.step.ComparatorHolder;
-import org.apache.tinkerpop.gremlin.process.traversal.step.filter.HasStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.filter.NoneStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.filter.TailGlobalStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.filter.WherePredicateStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.filter.RangeGlobalStep.RangeBiOperator;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.AddEdgeStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.AddVertexStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.CoalesceStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.CountGlobalStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.EdgeVertexStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.FoldStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.LambdaFlatMapStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.LambdaMapStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.OrderGlobalStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.SelectOneStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.TraversalFlatMapStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.UnfoldStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.map.VertexStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.AddPropertyStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.AggregateStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.IdentityStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.LambdaSideEffectStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.SackValueStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.SideEffectCapStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.StartStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.TraversalSideEffectStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.util.HasContainer;
-import org.apache.tinkerpop.gremlin.process.traversal.step.util.Parameters;
-import org.apache.tinkerpop.gremlin.process.traversal.util.OrP;
-import org.apache.tinkerpop.gremlin.tinkergraph.process.traversal.step.sideEffect.TinkerGraphStep;
-import org.javatuples.Pair;
+// import java.util.List;
+// import java.util.Map;
+// import java.util.Map.Entry;
+// import java.util.function.Function;
+// import java.util.function.Supplier;
+// 
+// import javax.lang.model.util.ElementScanner6;
+// 
+// import org.apache.tinkerpop.gremlin.process.traversal.P;
+// import org.apache.tinkerpop.gremlin.process.traversal.Pop;
+// import org.apache.tinkerpop.gremlin.process.traversal.Step;
+// import org.apache.tinkerpop.gremlin.process.traversal.Traversal;
+// import org.apache.tinkerpop.gremlin.process.traversal.Traversal.Admin;
+// import org.apache.tinkerpop.gremlin.process.traversal.lambda.ElementValueTraversal;
+// import org.apache.tinkerpop.gremlin.process.traversal.lambda.TokenTraversal;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.ComparatorHolder;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.filter.HasStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.filter.NoneStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.filter.TailGlobalStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.filter.WherePredicateStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.filter.RangeGlobalStep.RangeBiOperator;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.AddEdgeStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.AddVertexStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.CoalesceStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.CountGlobalStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.EdgeVertexStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.FoldStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.LambdaFlatMapStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.LambdaMapStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.OrderGlobalStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.SelectOneStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.TraversalFlatMapStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.UnfoldStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.map.VertexStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.AddPropertyStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.AggregateStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.IdentityStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.LambdaSideEffectStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.SackValueStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.SideEffectCapStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.StartStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.TraversalSideEffectStep;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.util.HasContainer;
+// import org.apache.tinkerpop.gremlin.process.traversal.step.util.Parameters;
+// import org.apache.tinkerpop.gremlin.process.traversal.util.OrP;
+// import org.javatuples.Pair;
 
 public class GremlinLatex {
 /*

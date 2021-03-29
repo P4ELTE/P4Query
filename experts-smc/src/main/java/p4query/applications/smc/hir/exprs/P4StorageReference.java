@@ -31,9 +31,6 @@ import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSo
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
-import p4query.applications.smc.hir.GlobalMemoryLayout;
-import p4query.applications.smc.hir.LocalMemoryLayout;
-import p4query.applications.smc.hir.ProcedureDefinition;
 import p4query.applications.smc.hir.typing.Composite;
 import p4query.applications.smc.hir.typing.IRType;
 import p4query.ontology.Dom;

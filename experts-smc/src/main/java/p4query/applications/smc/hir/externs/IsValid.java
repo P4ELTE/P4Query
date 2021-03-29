@@ -19,15 +19,11 @@ package p4query.applications.smc.hir.externs;
 import java.util.LinkedList;
 import java.util.List;
 
-import p4query.applications.smc.hir.Definition;
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.InstructionLayout;
-import p4query.applications.smc.hir.iset.ProcedureDone;
 import p4query.applications.smc.hir.typing.LocalStruct;
 import p4query.applications.smc.lir.iset.Comment;
 import p4query.applications.smc.lir.iset.Const;
-import p4query.applications.smc.lir.iset.GetField;
-import p4query.applications.smc.lir.iset.Load;
 import p4query.applications.smc.lir.iset.Return;
 import p4query.applications.smc.lir.iset.StackInstruction;
 import p4query.applications.smc.lir.typing.Int;

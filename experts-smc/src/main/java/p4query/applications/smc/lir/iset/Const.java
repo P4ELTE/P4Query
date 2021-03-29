@@ -16,8 +16,6 @@
  */
 package p4query.applications.smc.lir.iset;
 
-import java.io.PrintStream;
-
 import p4query.applications.smc.lir.typing.IntegerBasedType;
 
 public class Const implements StackInstruction {

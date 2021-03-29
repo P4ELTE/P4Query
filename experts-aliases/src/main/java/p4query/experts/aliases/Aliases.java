@@ -16,10 +16,6 @@
  */
 package p4query.experts.aliases;
 
-import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection;
-import org.apache.tinkerpop.gremlin.process.traversal.AnonymousTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +24,7 @@ import javax.inject.Singleton;
 
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.process.traversal.step.TraversalOptionParent.Pick;
 import org.apache.tinkerpop.gremlin.structure.Vertex;

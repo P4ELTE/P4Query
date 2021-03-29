@@ -16,7 +16,6 @@
  */
 package p4query.applications.smc.hir.exprs;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -27,12 +26,8 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 import p4query.applications.smc.hir.Definition;
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.LocalMemoryLayout;
-import p4query.applications.smc.hir.ProcedureDefinition;
 import p4query.applications.smc.hir.typing.IRType;
-import p4query.applications.smc.lir.iset.Load;
 import p4query.applications.smc.lir.iset.StackInstruction;
-import p4query.applications.smc.lir.iset.Store;
-import p4query.applications.smc.lir.typing.LocalAddress;
 import p4query.ontology.Dom;
 
 public class LiteralExpression implements Expression {

@@ -16,11 +16,9 @@
  */
 package p4query.applications.smc.hir.iset;
 
-import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import p4query.applications.smc.hir.typing.IRType;

@@ -48,9 +48,10 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.tinkerpop</groupId>
-      <artifactId>gremlin-core</artifactId>
-      <version>3.4.9</version>
+        <groupId>org.apache.tinkerpop</groupId>
+        <artifactId>gremlin-driver</artifactId>
+        <version>3.4.4</version>
+        <type>jar</type>
     </dependency>
 
     <dependency>

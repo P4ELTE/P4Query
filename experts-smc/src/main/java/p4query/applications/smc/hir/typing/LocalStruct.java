@@ -17,15 +17,9 @@
 package p4query.applications.smc.hir.typing;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-
 import p4query.applications.smc.hir.Definition;
-import p4query.applications.smc.hir.ProcedureDefinition;
 
 public class LocalStruct implements Composite {
 

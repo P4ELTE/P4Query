@@ -16,19 +16,24 @@
  */
 package p4query.experts.syntaxtree;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import javax.inject.Singleton;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
+
 import org.anarres.cpp.CppReader;
 import org.anarres.cpp.Preprocessor;
 import org.antlr.v4.gui.TreeViewer;
-import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.TokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
-
-import org.apache.tinkerpop.gremlin.process.traversal.Step;
-import org.apache.tinkerpop.gremlin.structure.Graph;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.codejargon.feather.Provides;
 
 import p4query.experts.syntaxtree.p4.P4Lexer;
@@ -38,24 +43,6 @@ import p4query.ontology.analyses.SyntaxTree;
 import p4query.ontology.providers.P4FileProvider.CoreP4File;
 import p4query.ontology.providers.P4FileProvider.InputP4File;
 import p4query.ontology.providers.P4FileProvider.V1ModelP4File;
-
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import javax.inject.Singleton;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.TransformerException;
 
 public class AntlrP4 {
 

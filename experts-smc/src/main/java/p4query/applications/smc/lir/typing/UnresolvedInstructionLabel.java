@@ -16,9 +16,6 @@
  */
 package p4query.applications.smc.lir.typing;
 
-import java.util.List;
-
-import p4query.applications.smc.lir.iset.Comment;
 import p4query.applications.smc.lir.iset.StackInstruction;
 
 public class UnresolvedInstructionLabel extends Label {

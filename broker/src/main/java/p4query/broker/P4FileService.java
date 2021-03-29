@@ -17,7 +17,6 @@
 package p4query.broker;
 
 import java.io.File;
-import java.io.IOException;
 
 import org.codejargon.feather.Provides;
 

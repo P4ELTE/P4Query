@@ -23,24 +23,15 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
-import javax.inject.Singleton;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
-import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection;
-import org.apache.tinkerpop.gremlin.process.traversal.AnonymousTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.reflections.Reflections;
-import org.codejargon.feather.Provides;
 
-import p4query.ontology.providers.AppUI;
-import p4query.ontology.providers.Application;
-import p4query.ontology.providers.CLIArgs;
 import p4query.applications.visualisation.GraphUtils.Label;
 import p4query.ontology.Status;
 import p4query.ontology.analyses.AbstractSyntaxTree;
@@ -49,6 +40,9 @@ import p4query.ontology.analyses.CallSites;
 import p4query.ontology.analyses.ControlFlow;
 import p4query.ontology.analyses.SymbolTable;
 import p4query.ontology.analyses.SyntaxTree;
+import p4query.ontology.providers.AppUI;
+import p4query.ontology.providers.Application;
+import p4query.ontology.providers.CLIArgs;
 
 public class Printer implements Application {
 

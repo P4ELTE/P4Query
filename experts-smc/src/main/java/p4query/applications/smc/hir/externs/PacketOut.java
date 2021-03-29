@@ -18,11 +18,8 @@ package p4query.applications.smc.hir.externs;
 
 import java.util.LinkedHashMap;
 
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-
 import p4query.applications.smc.hir.typing.Composite;
 import p4query.applications.smc.hir.typing.GenType;
-import p4query.applications.smc.hir.typing.GlobalStruct;
 import p4query.applications.smc.hir.typing.IRType;
 
 public class PacketOut implements Composite {

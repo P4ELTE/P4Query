@@ -16,9 +16,6 @@
  */
 package p4query.applications.smc.lir;
 
-import java.io.PrintStream;
-
-import p4query.applications.smc.lir.iset.Exit;
 import p4query.applications.smc.lir.iset.StackInstruction;
 
 public class LabelledStackInstruction {

@@ -16,7 +16,6 @@
  */
 package p4query.applications.smc.hir.iset;
 
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 

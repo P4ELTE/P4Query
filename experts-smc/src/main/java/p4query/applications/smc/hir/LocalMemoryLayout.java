@@ -16,16 +16,12 @@
  */
 package p4query.applications.smc.hir;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import p4query.applications.smc.hir.typing.ExternDataType;
 import p4query.applications.smc.hir.typing.IRType;
-import p4query.applications.smc.hir.typing.Struct;
 
 // note: this is somewhat different from GlobalMemoryLayout, because two parameters may have the same name
 //

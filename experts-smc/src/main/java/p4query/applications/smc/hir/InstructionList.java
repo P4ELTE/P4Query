@@ -31,7 +31,6 @@ import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import p4query.applications.smc.hir.iset.Instruction;
-import p4query.applications.smc.hir.iset.ProcedureDone;
 import p4query.applications.smc.hir.typing.IRType;
 import p4query.ontology.Dom;
 

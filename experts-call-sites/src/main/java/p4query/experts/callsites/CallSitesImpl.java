@@ -16,17 +16,12 @@
  */
 package p4query.experts.callsites;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import javax.inject.Singleton;
 
-import org.apache.tinkerpop.gremlin.process.traversal.Order;
-import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.process.traversal.step.TraversalOptionParent.Pick;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.codejargon.feather.Provides;

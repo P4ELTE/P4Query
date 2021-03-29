@@ -17,11 +17,9 @@
 package p4query.applications.smc.lir;
 
 import java.io.PrintStream;
-import java.util.LinkedList;
 
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.InstructionLayout;
-import p4query.applications.smc.lir.iset.StackInstruction;
 
 public class StackProgram {
    private GlobalMemoryLayout global;

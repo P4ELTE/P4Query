@@ -16,7 +16,6 @@
  */
 package p4query.applications.smc.hir;
 
-import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -26,14 +25,11 @@ import java.util.Map;
 
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
-import groovyjarjarantlr.collections.Stack;
-import p4query.applications.smc.hir.iset.Instruction;
+import p4query.applications.smc.lir.LabelledStackInstruction;
 import p4query.applications.smc.lir.iset.Comment;
-import p4query.applications.smc.lir.iset.Exit;
 import p4query.applications.smc.lir.iset.InterProcJumping;
 import p4query.applications.smc.lir.iset.IntraProcJumping;
 import p4query.applications.smc.lir.iset.ProbabilisticInstruction;
-import p4query.applications.smc.lir.LabelledStackInstruction;
 import p4query.applications.smc.lir.iset.StackInstruction;
 import p4query.applications.smc.lir.typing.Label;
 import p4query.applications.smc.lir.typing.UnresolvedInstructionLabel;

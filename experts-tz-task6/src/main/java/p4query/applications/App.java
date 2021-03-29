@@ -1,19 +1,6 @@
 package p4query.applications;
 
-import com.beust.jcommander.Parameter;
-import com.beust.jcommander.Parameters;
-
-import org.apache.tinkerpop.gremlin.process.traversal.P;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.structure.io.graphson.GraphSONMapper;
-import org.apache.tinkerpop.gremlin.structure.io.graphson.GraphSONVersion;
-import org.apache.tinkerpop.shaded.jackson.core.JsonProcessingException;
-import org.apache.tinkerpop.shaded.jackson.databind.ObjectMapper;
-import org.codejargon.feather.Provides;
-
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,14 +8,20 @@ import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
-import javax.inject.Singleton;
 
-import p4query.ontology.providers.Application;
-import p4query.ontology.providers.AppUI;
-import p4query.ontology.providers.P4FileProvider.InputP4File;
-import p4query.ontology.analyses.SyntaxTree;
+import org.apache.tinkerpop.gremlin.process.traversal.P;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
+import org.apache.tinkerpop.gremlin.structure.io.graphson.GraphSONMapper;
+import org.apache.tinkerpop.gremlin.structure.io.graphson.GraphSONVersion;
+import org.apache.tinkerpop.shaded.jackson.databind.ObjectMapper;
+
 import p4query.ontology.Dom;
 import p4query.ontology.Status;
+import p4query.ontology.analyses.SyntaxTree;
+import p4query.ontology.providers.AppUI;
+import p4query.ontology.providers.Application;
+import p4query.ontology.providers.P4FileProvider.InputP4File;
 
 public class App implements Application {
 

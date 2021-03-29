@@ -22,28 +22,16 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 
 import javax.inject.Inject;
 
 import com.beust.jcommander.Parameter;
 
-import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import p4query.applications.smc.hir.Program;
 import p4query.applications.smc.lir.StackProgram;
-import p4query.ontology.Dom;
 import p4query.ontology.Status;
-import p4query.ontology.analyses.CallGraph;
 import p4query.ontology.analyses.CallSites;
 import p4query.ontology.analyses.ControlFlow;
 import p4query.ontology.providers.AppUI;

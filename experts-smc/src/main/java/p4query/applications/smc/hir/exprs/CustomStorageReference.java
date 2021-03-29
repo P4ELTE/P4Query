@@ -17,10 +17,8 @@
 package p4query.applications.smc.hir.exprs;
 
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
-import p4query.applications.smc.hir.ProcedureDefinition;
 import p4query.applications.smc.hir.typing.IRType;
 
 public class CustomStorageReference extends StorageReference {

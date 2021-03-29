@@ -18,24 +18,17 @@ package p4query.applications.smc.hir.iset;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
 
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.LocalMemoryLayout;
 import p4query.applications.smc.hir.ProcedureDefinition;
 import p4query.applications.smc.hir.exprs.Expression;
-import p4query.applications.smc.hir.exprs.LiteralExpression;
 import p4query.applications.smc.hir.exprs.SelectKeyExpression;
 import p4query.applications.smc.hir.typing.IRType;
-import p4query.applications.smc.lir.iset.Comment;
-import p4query.applications.smc.lir.iset.IfEq;
 import p4query.applications.smc.lir.iset.StackInstruction;
-import p4query.ontology.Dom;
 
 public class SelectCase implements Instruction {
     private ProcedureDefinition procDef;

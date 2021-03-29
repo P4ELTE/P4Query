@@ -16,28 +16,6 @@
  */
 package p4query.experts.symboltable;
 
-import p4query.ontology.Dom;
-import p4query.ontology.Status;
-import p4query.ontology.analyses.AbstractSyntaxTree;
-import p4query.ontology.analyses.SymbolTable;
-import p4query.ontology.analyses.SyntaxTree;
-
-import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection;
-import org.apache.tinkerpop.gremlin.process.traversal.AnonymousTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-
-import org.apache.tinkerpop.gremlin.process.traversal.Operator;
-import org.apache.tinkerpop.gremlin.process.traversal.Order;
-import org.apache.tinkerpop.gremlin.process.traversal.P;
-import org.apache.tinkerpop.gremlin.process.traversal.step.TraversalOptionParent.Pick;
-import org.apache.tinkerpop.gremlin.structure.Edge;
-import org.apache.tinkerpop.gremlin.structure.Graph;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.util.function.Lambda;
-import org.codejargon.feather.Provides;
-import org.apache.tinkerpop.gremlin.process.traversal.step.util.BulkSet;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -46,6 +24,20 @@ import java.util.List;
 import java.util.Map;
 
 import javax.inject.Singleton;
+
+import org.apache.tinkerpop.gremlin.process.traversal.Order;
+import org.apache.tinkerpop.gremlin.process.traversal.P;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.util.function.Lambda;
+import org.codejargon.feather.Provides;
+
+import p4query.ontology.Dom;
+import p4query.ontology.Status;
+import p4query.ontology.analyses.AbstractSyntaxTree;
+import p4query.ontology.analyses.SymbolTable;
+import p4query.ontology.analyses.SyntaxTree;
 
 
 // TODO this module should be rewritten, espec. w.r.t. the "fix" prefixed methods 

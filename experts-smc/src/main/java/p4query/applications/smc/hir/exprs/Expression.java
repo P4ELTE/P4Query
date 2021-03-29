@@ -21,12 +21,10 @@ import java.util.List;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.structure.io.Storage;
 
 import p4query.applications.smc.hir.Definition;
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.LocalMemoryLayout;
-import p4query.applications.smc.hir.ProcedureDefinition;
 import p4query.applications.smc.hir.typing.IRType;
 import p4query.applications.smc.lir.iset.StackInstruction;
 import p4query.ontology.Dom;
