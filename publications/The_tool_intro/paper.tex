@@ -323,13 +323,13 @@ The figure also partially includes domains of other analysers, such as \texttt{S
   \end{figure}
 
 	\subsection{Testing}
-	There are two main goals with the testing: to test if the analysers work well; and because it is a quite new tool, it will go through a lot of changes, therefore the possible spoils of the analysers during changes need to be detected. This version of the tool contains unit tests and integration tests to check the functional correctness. 
+	The framework has a specific testing module, which has two main goals: to test if the analysers work well; and to test the possible spoils of the analysers during changes. So the tool contains unit tests and integration tests to check the functional correctness. 
 	
-	With the unit tests, our main goal is to check if the analysers work well. Unit tests need to be fast, therefore they work with smallest part of the analysers ie. their functions. One function usually define one query of the graph, which insert new edges into it, therefore in these cases, the tests check if the right edges are added to the graph. Using actual P4 source, to test these functions, would be too costly, therefore we define the most simple graphs --, which contains only those edges and vertices, which are necessary for the query -- to check the function.
+	Unit tests need to be fast, therefore they work with smallest part of the analysers ie. their functions. One function usually define one query of the graph, which insert new edges into it, therefore in these cases, the tests check if the right edges are added to the graph. Using actual P4 source, to test these functions, would be too costly, therefore we define the most simple graphs --, which contains only those edges and vertices, which are necessary for the query -- to check the function.
 	
 	While unit tests need to be fast, integration tests can be slower, so we can use P4 files as the inputs to test the analysers. When one analyser needs to be tested, it uses the P4 file, and executes every analyser, that it is based on and the tests will check the result of this running. The tests are predefined, therefore we use a file to store the information of the tested sources and analyser -- which file tests which analysers and with which test classes.
 	
-	There are two approaches to run these tests. One of them executes all of the defined tests -- i.e. it goes through all of the P4 sources and executes the necessary analysers and tests the their results -- which is useful to test the whole program and identify regression errors. The other focuses only one analyser and it is useful, when someone actually develop that analyser. This approach run only those tests which are relevant for the analyser.
+	There are two approaches to run these tests. One of them executes all of the defined tests -- i.e. it goes through all of the P4 sources and executes the necessary analysers and tests their results -- which is useful to test the whole program and identify regression errors. The other focuses only one analyser and it is useful, when someone actually develop that analyser. This approach run only those tests which are relevant for the analyser.
 	
 	The architecture gives opportunity to insert the test as an application, which depends on all of the tested analysers, because it needs to test every analyser of the tool. 
 	
