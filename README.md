@@ -33,17 +33,15 @@ We use [Graphviz](https://graphviz.org/) to visualize the graphs, so we recommen
 
 ### Start from jar
 
-If someone wants to start the program in an easy way then the jar file (`p4query-jar-with-dependencies.jar`) in the root directory can be used for it. 
+For trying the tool, download the [release](TODO), unpack the ZIP and launch it using the following command: 
 
-Start the visualisation with the 
-
-```sh
-$ java -jar p4query-jar-with-dependencies.jar "draw" "-A" analysers
+```
+$ ./p4query.cmd  "draw" "-A" ControlFlow 
 ```
 
-command can be used, where the analysers are the analyses, that the user would like to run and visualize. analysers can be: `SyntaxTree`, `AbstractSyntaxTree`, `SymbolTable`, `CallSites` `ControlFlow`, `CallGraph`.
+This will create an SVG of the control flow graph in your temp directory for the built-in [basic.p4](broker/src/main/resources/basic.p4) file. For more information on parameters (including supplying your own P4 file), please see [User Guide](docs/user_guide.md).
 
-More information can be seen in the [User Guide](docs/user_guide.md).
+Note: if the command doesn't work for you, you can also try launching the JAR in the ZIP file directly (`$ java -jar pquery.jar  "draw" "-A" ControlFlow`).
 
 ## Contributing
 
