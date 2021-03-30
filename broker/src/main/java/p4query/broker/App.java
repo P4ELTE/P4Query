@@ -89,6 +89,7 @@ public class App {
         try {
             App broker = new App(args);
             broker.run();
+            broker.close();
         } catch (IllegalUserInputException e) {
             System.out.println(e.getMessage());
         } // otherwise: crash
@@ -97,7 +98,7 @@ public class App {
     }
 
 
-    private App(String[] args) throws DiscoveryException, IOException, LocalGremlinServerException,
+    public App(String[] args) throws DiscoveryException, IOException, LocalGremlinServerException,
             ClassNotFoundException, ReflectionException, IllegalUserInputException {
 
         analysers = App.discoverAnalysers();
@@ -117,7 +118,7 @@ public class App {
         feather = initDI(cli, pfs, analysers, server);
     }
 
-    private void run() throws Exception {
+    public void run() throws Exception {
 
         AppUI ui = cli.getInvokedAppUI();
 
@@ -134,7 +135,14 @@ public class App {
                 System.out.println("--readonly argument found, modifications are not saved");
         }
 
-        server.close();
+    }
+
+    public void close() throws Exception {
+      server.close();
+    }
+
+    public GraphTraversalSource getGraphTraversalSource() throws Exception {
+      return server.provideConnection();
     }
 
     private static String contentsToTempFile(InputStream is, String fileName) throws IOException {
