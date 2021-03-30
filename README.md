@@ -35,13 +35,13 @@ We use [Graphviz](https://graphviz.org/) to visualize the graphs, so we recommen
 
 For trying the tool, download the [release](TODO), unpack the ZIP and launch it using the following command: 
 
-```
-$ ./p4query.cmd  "draw" "-A" ControlFlow 
+```sh
+$ ./p4query.cmd  draw -A ControlFlow
 ```
 
 This will create an SVG of the control flow graph in your temp directory for the built-in [basic.p4](broker/src/main/resources/basic.p4) file. For more information on parameters (including supplying your own P4 file), please see [User Guide](docs/user_guide.md).
 
-Note: if the command doesn't work for you, you can also try launching the JAR in the ZIP file directly (`$ java -jar pquery.jar  "draw" "-A" ControlFlow`).
+Note: if the command doesn't work for you, you can also try launching the JAR in the ZIP file directly (`$ java -jar pquery.jar  draw -A ControlFlow`).
 
 ## Contributing
 
