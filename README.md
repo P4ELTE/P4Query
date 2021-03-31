@@ -63,5 +63,5 @@ Authors:
 
 Acknowledgements:
 
-- Thanks for Ali Fattaholmanan for publishing his ANTLR implementation of the P4 grammar.
+- Thanks for Ali Fattaholmanan for publishing his [ANTLR implementation of the P4 grammar](https://github.com/fattaholmanan/p4-vscode-extension/blob/master/grammar/P4.g4).
 - Thanks for all the developers for working on the dependencies in the `pom.xml`s. 

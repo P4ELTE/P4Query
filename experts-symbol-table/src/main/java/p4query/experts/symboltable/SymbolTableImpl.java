@@ -63,7 +63,7 @@ public class SymbolTableImpl
         packageInstantiations(g);
         controlAndParserInstantiations(g);
 
-        fixBaseType(g);
+        fixBaseTypeType(g);
         fixTypedefs(g);
         fixEnums(g);
         fixMissingScopes(g);
@@ -502,7 +502,7 @@ public class SymbolTableImpl
     }
 
 
-    private void fixBaseType(GraphTraversalSource g) {
+    private void fixBaseTypeType(GraphTraversalSource g) {
         g.V().or(__.has(Dom.Syn.V.CLASS, "StructFieldContext"),
                  __.has(Dom.Syn.V.CLASS, "ConstantDeclarationContext"))
               .as("field")
@@ -645,6 +645,7 @@ public class SymbolTableImpl
     // This is just a local fix.
     private static void fixMissingScopes(GraphTraversalSource g) {
 
+        // name terminals with no inbound scope edge
         List<Vertex> noScopes =
             g.V().has(Dom.Syn.V.CLASS, "ExpressionContext")
                 .repeat(__.outE(Dom.SYN).inV())
@@ -655,6 +656,7 @@ public class SymbolTableImpl
                 .dedup()
                 .toList();
 
+        // for each such name terminal, find the dot-expression that contains the terminal
         List<Vertex> topLevDots = 
             g.V(noScopes)
              .repeat(__.inE(Dom.SYN).outV())
@@ -664,6 +666,8 @@ public class SymbolTableImpl
              .toList();
 
         for (Vertex dotExpr : topLevDots) {
+
+            // collect the referenced fields of the dot-expression into a list
             List<Vertex> fields = 
                 g.V(dotExpr) 
                 .repeat(__.outE(Dom.SYN)
@@ -678,6 +682,8 @@ public class SymbolTableImpl
             Iterator<Vertex> it = fields.iterator();
             Vertex first = it.next();
 
+            // find the type of the declaration that scopes the first field reference. 
+            // note that the first field of dot-expressions should always be a struct or a header 
             Vertex lastStruct = 
                 g.V(first)
                 .inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).outV()
@@ -687,6 +693,12 @@ public class SymbolTableImpl
                 .next();
 
             while(it.hasNext()){
+
+                if(g.V(lastStruct).has(Dom.Syn.V.CLASS, "BaseTypeContext").hasNext()){
+                        throw new IllegalStateException("Previous field reference had base-tyoe type, did not expect more fields.");
+                }
+
+                // move to the next field reference
                 Vertex current = it.next();
                 String fieldVal = (String) g.V(current).values("value").next();
 
@@ -694,12 +706,20 @@ public class SymbolTableImpl
                 if(fieldVal.equals("isValid")) 
                     continue;
 
-                if(g.V(lastStruct).has(Dom.Syn.V.CLASS, "BaseTypeContext").hasNext()){
-                    g.addE(Dom.SYMBOL).from(lastStruct).to(current)
-                    .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
-                    .iterate();
-                    continue;
-                }
+
+// delete this 
+//                // if the last field reference declaration has base-type type, add a missing scope edge, and terminate.
+//                if(g.V(lastStruct).has(Dom.Syn.V.CLASS, "BaseTypeContext").hasNext()){
+//                    g.addE(Dom.SYMBOL).from(lastStruct).to(current)
+//                    .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+//                    .iterate();
+//
+//                    if(it.hasNext())
+//                        throw new IllegalStateException("Current field has base-tyoe type, did not expect more fields.");
+//                    break;
+//                }
+
+                // in the struct that was referred to by the previous field reference, find the first field with the same name as the current field reference.
 
                 Vertex correspStructField  =
                     g.V(lastStruct)
@@ -716,6 +736,7 @@ public class SymbolTableImpl
                  .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
                  .iterate();
 
+            // find the type of the field declaration that scopes the current field reference. 
                 lastStruct = 
                     g.V(correspStructField)
                     .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE)
