@@ -33,10 +33,10 @@ We use [Graphviz](https://graphviz.org/) to visualize the graphs, so we recommen
 
 ### Start from jar
 
-For trying the tool, download the [release](TODO), unpack the ZIP and launch it using the following command: 
+For trying the tool, download the [release](https://github.com/P4ELTE/P4Query/releases/download/v1.0/p4query-v1.0-prealpha.zip), unpack the ZIP and launch it using the following command: 
 
 ```sh
-$ ./p4query.cmd  draw -A ControlFlow
+$ ./p4query.cmd draw -A ControlFlow
 ```
 
 This will create an SVG of the control flow graph in your temp directory for the built-in [basic.p4](broker/src/main/resources/basic.p4) file. For more information on parameters (including supplying your own P4 file), please see [User Guide](docs/user_guide.md).
