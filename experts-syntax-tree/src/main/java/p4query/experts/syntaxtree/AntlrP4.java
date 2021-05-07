@@ -51,6 +51,7 @@ public class AntlrP4 {
     @SyntaxTree
     public Status analyse(GraphTraversalSource g, @InputP4File File inputP4, @CoreP4File File coreP4, @V1ModelP4File File v1Model) throws IOException
     {
+        long startTime = System.currentTimeMillis();
         System.out.println(SyntaxTree.class.getSimpleName() +" started.");
 
 // // Antlr4 P4 parser generation is now automatically managed by Maven. 
@@ -88,7 +89,8 @@ public class AntlrP4 {
 
         TinkerGraphParseTree.fromParseTree(g, tree, lexer.getVocabulary(), parser.getRuleNames());
 
-        System.out.println(SyntaxTree.class.getSimpleName() +" complete.");
+        long stopTime = System.currentTimeMillis();
+        System.out.println(String.format("%s complete. Time used: %s ms.", SyntaxTree.class.getSimpleName() , stopTime - startTime));
 
         return new Status();
     }
