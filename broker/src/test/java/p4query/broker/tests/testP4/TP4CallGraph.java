@@ -5,6 +5,9 @@
 package p4query.broker.tests.testP4;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
 import static org.junit.Assert.assertEquals;
 
@@ -13,24 +16,28 @@ import org.junit.BeforeClass;
 import java.util.Arrays;
 import java.util.List;
 import p4query.broker.P4Resource;
-
+import p4query.broker.tests.MainTestFile;
+import p4query.broker.tests.generalTests.CallGraphTestGeneral;
 import p4query.ontology.Dom;
 
-public class TP4CallGraph {
+@RunWith(Suite.class)
+@SuiteClasses({TP4CallGraph.Tests.class, CallGraphTestGeneral.class})
+public class TP4CallGraph extends MainTestFile {
 
-    private static String fileName = "src/main/resources/test.p4";
-    private static List<String> analyses = Arrays.asList("CallGraph");
-    private static GraphTraversalSource g;
+  private static String fileName = "src/main/resources/test.p4";
+  private static List<String> analyses = Arrays.asList("CallGraph");
 
-    @BeforeClass
-    public static void preTest() {
-        P4Resource source = P4Resource.getP4Resource(fileName, analyses);
-        try {
-          g = source.getGraphTravSource();
-        } catch (Exception e) {
-          System.out.println(e.getMessage());
-        }    }
-    
+  @BeforeClass
+  public static void preTest() {
+      P4Resource source = P4Resource.getP4Resource(fileName, analyses);
+      try {
+        g = source.getGraphTravSource();
+      } catch (Exception e) {
+        System.out.println(e.getMessage());
+      }   
+  }
+  
+  public static class Tests {
     @Test
     public void testEdgeNumber() {
         assertEquals(18, g.E().has(Dom.Call.ROLE, Dom.Call.Role.CALLS).count().next().intValue());
@@ -83,4 +90,5 @@ public class TP4CallGraph {
                     .inV().has(Dom.Syn.V.CLASS, "FunctionPrototypeContext")
                     .count().next().intValue());
     }
+  }
 }

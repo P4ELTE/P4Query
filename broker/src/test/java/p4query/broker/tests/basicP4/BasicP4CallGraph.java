@@ -5,34 +5,40 @@
 package p4query.broker.tests.basicP4;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.tinkerpop.gremlin.groovy.jsr223.dsl.credential.__;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.junit.BeforeClass;
 import java.util.Arrays;
 import java.util.List;
 import p4query.broker.P4Resource;
-
+import p4query.broker.tests.MainTestFile;
+import p4query.broker.tests.generalTests.CallGraphTestGeneral;
 import p4query.ontology.Dom;
 
-public class BasicP4CallGraph {
+@RunWith(Suite.class)
+@SuiteClasses({CallGraphTestGeneral.class, BasicP4CallGraph.Tests.class})
+public class BasicP4CallGraph extends MainTestFile {
 
-    private static String fileName = "src/main/resources/basic.p4";
-    private static List<String> analyses = Arrays.asList("CallGraph");
-    private static GraphTraversalSource g;
+  private static String fileName = "src/main/resources/basic.p4";
+  private static List<String> analyses = Arrays.asList("CallGraph");
 
-    @BeforeClass
-    public static void preTest() {
-        P4Resource source = P4Resource.getP4Resource(fileName, analyses);
-        System.out.println("test1");
-        try {
-          g = source.getGraphTravSource();
-        } catch (Exception e) {
-          System.out.println(e.getMessage());
-        }
-    }
+  @BeforeClass
+  public static void preTest() {
+      P4Resource source = P4Resource.getP4Resource(fileName, analyses);
+      System.out.println("test1");
+      try {
+        g = source.getGraphTravSource();
+      } catch (Exception e) {
+        System.out.println(e.getMessage());
+      }
+  }
+
+  public static class Tests {
     
     @Test
     public void testEdgeNumber() {
@@ -86,4 +92,5 @@ public class BasicP4CallGraph {
                     .inV().has(Dom.Syn.V.CLASS, "FunctionPrototypeContext")
                     .count().next().intValue());
     }
+  }
 }
