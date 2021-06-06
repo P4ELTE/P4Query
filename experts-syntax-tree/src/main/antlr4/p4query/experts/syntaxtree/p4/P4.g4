@@ -775,13 +775,13 @@ expression
     | expression '[' expression ':' expression ']'
     | '{' expressionList '}' 
     | '(' expression ')' 
+    | typeName '.' name
+    | ERROR '.' name
+    | expression '.' name
     | '!' expression //%prec PREFIX
     | '~' expression //%prec PREFIX
     | '-' expression //%prec PREFIX
     | '+' expression //%prec PREFIX
-    | typeName '.' name
-    | ERROR '.' name
-    | expression '.' name
     | expression '*' expression
     | expression '/' expression
     | expression '%' expression
