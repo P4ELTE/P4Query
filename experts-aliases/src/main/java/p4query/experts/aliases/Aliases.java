@@ -50,13 +50,15 @@ public class Aliases {
     @Singleton
     @AbstractSyntaxTree
     public Status analyse(GraphTraversalSource g, @SyntaxTree Status s){
+        long startTime = System.currentTimeMillis();
         System.out.println(AbstractSyntaxTree.class.getSimpleName() +" started.");
 
         Parser.analyse(g);
         Control.analyse(g);
         Instantiation.analyse(g);
 
-        System.out.println(AbstractSyntaxTree.class.getSimpleName() +" complete.");
+        long stopTime = System.currentTimeMillis();
+        System.out.println(String.format("%s complete. Time used: %s ms.", AbstractSyntaxTree.class.getSimpleName() , stopTime - startTime));
         return new Status();
     }
 

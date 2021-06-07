@@ -39,6 +39,8 @@ public class CallGraphGenerator {
     @Singleton
     @CallGraph
     public Status analyse(GraphTraversalSource g, @SyntaxTree Status s, @AbstractSyntaxTree Status a, @SymbolTable Status t){
+
+        long startTime = System.currentTimeMillis();
         System.out.println(CallGraph.class.getSimpleName() +" started.");
 
         whoCallsAction(g);
@@ -47,7 +49,8 @@ public class CallGraphGenerator {
         whoCallsParserState(g);
         whoInvokesParsersAndControls(g);
 
-        System.out.println(CallGraph.class.getSimpleName() +" complete.");
+        long stopTime = System.currentTimeMillis();
+        System.out.println(String.format("%s complete. Time used: %s ms.", CallGraph.class.getSimpleName() , stopTime - startTime));
 
         return new Status();
     }
@@ -69,7 +72,8 @@ public class CallGraphGenerator {
             .flatMap(
             __.outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).inV()
             .repeat(__.in(Dom.SYN))
-            .until(__.has(Dom.Syn.V.CLASS, "TableDeclarationContext"))
+            .until(__.or(__.has(Dom.Syn.V.CLASS, "TableDeclarationContext"),
+                         __.has(Dom.Syn.V.CLASS, "ControlDeclarationContext")))
             .dedup())
         .addE(Dom.CALL).to("decl")
         .property(Dom.Call.ROLE, Dom.Call.Role.CALLS)

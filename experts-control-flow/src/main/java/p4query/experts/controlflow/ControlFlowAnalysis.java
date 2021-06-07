@@ -53,6 +53,7 @@ public class ControlFlowAnalysis {
                             @SyntaxTree Status st, 
                             @AbstractSyntaxTree Status ast, 
                             @SymbolTable Status sym) {
+            long startTime = System.currentTimeMillis();
 
         // // query printing
         //        File f = File. createTempFile("query", ".tex");
@@ -74,7 +75,8 @@ public class ControlFlowAnalysis {
 
             quickfixSelectInCFG(g);
 
-            System.out.println(ControlFlow.class.getSimpleName() +" complete.");
+            long stopTime = System.currentTimeMillis();
+            System.out.println(String.format("%s complete. Time used: %s ms.", ControlFlow.class.getSimpleName() , stopTime - startTime));
             return new Status();
         }
 

@@ -181,7 +181,7 @@ public class TinkerGraphParseTree {
             Iterator<EdgeResult> ers = edges.iterator();
             ers.next(); // ignore the root node, it has no incoming edge;
 
-            for (int i = 0; i < batchCount; i++) {
+            for (int i = 0; i < batchCount && ers.hasNext(); i++) {
                 EdgeResult er = ers.next();
                 GraphTraversal<Edge, Edge> t = g.addE(er.label);
                 t = t.from(vertMap.get(er.source));

@@ -86,6 +86,7 @@ public class App {
 
     public static void main(String[] args) throws Exception {
 
+        long startTimeApp = System.currentTimeMillis();
         try {
             App broker = new App(args);
             broker.run();
@@ -94,6 +95,9 @@ public class App {
             System.out.println(e.getMessage());
         } // otherwise: crash
 
+
+        long stopTimeApp = System.currentTimeMillis();
+        System.out.println(String.format("Total time used: %s ms.", stopTimeApp - startTimeApp));
         System.exit(0);
     }
 

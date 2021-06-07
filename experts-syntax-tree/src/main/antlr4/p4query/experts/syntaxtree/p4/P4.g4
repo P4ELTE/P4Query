@@ -775,9 +775,10 @@ expression
     | expression '[' expression ':' expression ']'
     | '{' expressionList '}' 
     | '(' expression ')' 
-    | typeName '.' name
-    | ERROR '.' name
-    | expression '.' name
+    | typeName '.' name                                                          
+    | ERROR '.' name                                                             
+    | expression '.' name                                                        
+    // LD: moved the previous ones (cf. spec): dot should have higher precendence than usual operators.
     | '!' expression //%prec PREFIX
     | '~' expression //%prec PREFIX
     | '-' expression //%prec PREFIX
@@ -804,12 +805,12 @@ expression
     | expression '&&' expression
     | expression '||' expression
     | expression '?' expression ':' expression
-    | expression '<' realTypeArgumentList '>' '(' argumentList ')'
-    // FIXME: the previous rule has the wrong precedence, and parses with
-    // precedence weaker than casts.  There is no easy way to fix this in bison.
-    | expression '(' argumentList ')'
-    | namedType '(' argumentList ')'
-	| '(' typeRef ')' expression // %prec PREFIX 
+    | expression '<' realTypeArgumentList '>' '(' argumentList ')'               
+    // FIXME: the previous rule has the wrong precedence, and parses with        
+    // precedence weaker than casts.  There is no easy way to fix this in bison. 
+    | expression '(' argumentList ')'                                            
+    | namedType '(' argumentList ')'                                             
+	| '(' typeRef ')' expression // %prec PREFIX                                 
     ;
 
 
