@@ -378,29 +378,35 @@ public class Aliases {
         }
 
 
-        @SuppressWarnings("unchecked")
         private static void findConditionalBranches(GraphTraversalSource g) {
+            List<Vertex> conds = 
+                g.V().has(Dom.Syn.V.CLASS, "ConditionalStatementContext")
+                     .toList();
+            for (Vertex cond : conds) {
+                List<Vertex> branches = 
+                    g.V(cond).outE(Dom.SYN).has(Dom.Syn.E.RULE, "statement")
+                    .order().by(Dom.Syn.E.ORD, Order.asc)
+                    .inV().out(Dom.SYN)
+                    .toList();
 
-            g.E().hasLabel(Dom.SEM)
-             .has(Dom.Sem.DOMAIN, Dom.Sem.Domain.TOP).has(Dom.Sem.ROLE, Dom.Sem.Role.Top.CONTROL).inV()
-             .repeat(__.out(Dom.SYN))
-             .emit(__.has(Dom.Syn.V.CLASS, "ConditionalStatementContext"))
-             .as("cond")
-             .outE(Dom.SYN).has(Dom.Syn.E.RULE, "statement")
-             .order().by(Dom.Syn.E.ORD)
-             .inV().out(Dom.SYN)
-             .<Vertex>union(
-                 __.<Vertex>limit(1)
-                    .addE(Dom.SEM).from("cond")
-                    .property(Dom.Sem.DOMAIN, Dom.Sem.Domain.CONTROL)
-                    .property(Dom.Sem.ROLE, Dom.Sem.Role.Control.TRUE_BRANCH)
-                    .inV(),
-                __.<Vertex>skip(1)
-                    .addE(Dom.SEM).from("cond")
-                    .property(Dom.Sem.DOMAIN, Dom.Sem.Domain.CONTROL)
-                    .property(Dom.Sem.ROLE, Dom.Sem.Role.Control.FALSE_BRANCH)
-                    .inV())
-             .iterate();
+                if(branches.isEmpty()){
+                    throw new IllegalStateException(
+                        "Conditional has no branches: " 
+                        + g.V(cond).elementMap().next());
+                }
+
+                g.V(cond).addE(Dom.SEM).to(branches.get(0))
+                        .property(Dom.Sem.DOMAIN, Dom.Sem.Domain.CONTROL)
+                        .property(Dom.Sem.ROLE, Dom.Sem.Role.Control.TRUE_BRANCH)
+                        .iterate();
+
+                if(branches.size() > 1){
+                    g.V(cond).addE(Dom.SEM).to(branches.get(1))
+                            .property(Dom.Sem.DOMAIN, Dom.Sem.Domain.CONTROL)
+                            .property(Dom.Sem.ROLE, Dom.Sem.Role.Control.FALSE_BRANCH)
+                            .iterate();
+                }
+            }
         }
 
         // Sends a 'last' edge from each 'block statement' node to its last nested node.

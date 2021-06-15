@@ -86,7 +86,8 @@ public class App {
 
     public static void main(String[] args) throws Exception {
 
-        long startTimeApp = System.currentTimeMillis();
+        // TODO use finally (and after that, check that database persistence still works consistently between runs and crashes)
+	long startTimeApp = System.currentTimeMillis();
         try {
             App broker = new App(args);
             broker.run();
