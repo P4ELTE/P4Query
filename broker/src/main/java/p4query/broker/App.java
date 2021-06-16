@@ -85,8 +85,6 @@ public class App {
     // NOTE: field order matters
     // NOTE: loading files from classpath seems to be platform-dependent, so we load them as streams and write them to temp files
     private final ClassLoader loader =  Thread.currentThread().getContextClassLoader();
-    private final String actualCoreP4 = contentsToTempFile(loader.getResourceAsStream(CORE_P4_PATH), "core.p4");
-    private final String actualV1ModelP4 = contentsToTempFile(loader.getResourceAsStream(V1MODEL_P4_PATH), "v1model.p4");
     private final String actualBasicP4 = contentsToTempFile(loader.getResourceAsStream(BASIC_P4_PATH), "basic.p4");
     private P4FileService pfs;
 
