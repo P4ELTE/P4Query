@@ -127,7 +127,8 @@ public class App {
 
         List<String> includes = new LinkedList<>();
         includes.add(includeDir.getAbsolutePath());
-        includes.addAll(cli.getInvokedAppUI().includes);
+        if(cli.getInvokedAppUI().includes != null)
+            includes.addAll(cli.getInvokedAppUI().includes);
 
         String p4FilePath = cli.getInvokedAppUI().getActualP4FilePath();
         pfs = new P4FileService(p4FilePath, includes);
