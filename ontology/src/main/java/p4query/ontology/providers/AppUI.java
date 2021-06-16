@@ -34,6 +34,8 @@ public abstract class AppUI {
     @Parameter(description = "<location of P4 file to be analysed>" /* , required = true  */)
     public String p4FilePath;
 
+    @Parameter(names={"-I", "--include"}, description = "List of folders to be searched for header files. Note that core.p4 and v1model.p4 is built-in, no need to add them.")
+    public List<String> includes;
 
     @Parameter(names={"--reset"}, description = "To be used together with the --store option. Run all the analysers again from scratch and overwrite the existing database.")
     public boolean reset;
