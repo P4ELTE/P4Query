@@ -63,18 +63,18 @@ public class SymbolTableImpl
         resolveTypeRefs(g);
         parserStateScopes(g);
         localScope(g);
-        parameterScope(g);
+        parameterAndInstantiationScope(g);
         fieldAndMethodScope(g);
         actionRefs(g);
         actionApps(g);
         tableApps(g);
         packageInstantiations(g);
-        controlAndParserInstantiations(g);
+//        controlAndParserInstantiations(g);  // TODO delete this
 
         fixTypedefs(g);
         fixEnums(g);
         fixMissingScopes(g);
-        fixGlobalConstantScopes(g);
+        globalScopes(g);
 
         long stopTime = System.currentTimeMillis();
         System.out.println(String.format("%s complete. Time used: %s ms.", SymbolTable.class.getSimpleName() , stopTime - startTime));
@@ -98,7 +98,8 @@ public class SymbolTableImpl
             __.has(Dom.Syn.V.CLASS, "ParserDeclarationContext"),
             __.has(Dom.Syn.V.CLASS, "ParserStateContext"),
             __.has(Dom.Syn.V.CLASS, "PackageTypeDeclarationContext"),
-            __.has(Dom.Syn.V.CLASS, "ParameterContext"))
+            __.has(Dom.Syn.V.CLASS, "ParameterContext"),
+            __.has(Dom.Syn.V.CLASS, "InstantiationContext"))
         .as("root")
         .optional(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "parserTypeDeclaration").inV())
         .optional(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "controlTypeDeclaration").inV())
@@ -161,7 +162,7 @@ public class SymbolTableImpl
                 __.has(Dom.Syn.V.CLASS, "ExternDeclarationContext"),
                 __.has(Dom.Syn.V.CLASS, "VariableDeclarationContext"),
                 __.has(Dom.Syn.V.CLASS, "ConstantDeclarationContext"),
-                __.has(Dom.Syn.V.CLASS, "StructTypeDeclarationContext")) 
+                __.has(Dom.Syn.V.CLASS, "StructTypeDeclarationContext"))
             .as("declNode")
             .outE(Dom.SYMBOL).has(Dom.Sem.ROLE, Dom.Symbol.Role.DECLARES_NAME)
             .inV()
@@ -224,18 +225,94 @@ public class SymbolTableImpl
         // inside a block, all statements to the right of the declaration are in the scope (until the end of the block)
 
         // select variable or constant declarations and their names
-        g.V().hasLabel(Dom.SYN)
-            .or(__.has(Dom.Syn.V.CLASS, "VariableDeclarationContext"),
-                __.has(Dom.Syn.V.CLASS, "ConstantDeclarationContext"))
-            .as("decl")
-            .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME).inV()
-            .values("value")
-            .as("declaredName")
+        List<Map<String, Object>> decls =
+            g.V().hasLabel(Dom.SYN)
+                .or(__.has(Dom.Syn.V.CLASS, "VariableDeclarationContext"),
+                    __.has(Dom.Syn.V.CLASS, "ConstantDeclarationContext"))
+                .as("decl")
+                .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME).inV()
+                .values("value")
+                .as("declaredName")
+                .select("decl", "declaredName")
+                .toList();
 
+        for (Map<String,Object> map : decls) {
+            Vertex decl = (Vertex) map.get("decl") ;
+            String declaredName = (String) map.get("declaredName") ;
+
+            String scope = (String)
+                g.V(decl)
+                    .repeat(__.in(Dom.SYN))
+                    .until(__.or(__.has(Dom.Syn.V.CLASS, "BlockStatementContext"),
+                                __.has(Dom.Syn.V.CLASS, "ProgramContext"),
+                                __.has(Dom.Syn.V.CLASS, "ControlDeclarationContext")))
+                    .values(Dom.Syn.V.CLASS)
+                    .next();
+
+            switch(scope){
+                case "BlockStatementContext":  
+                    localScopeInsideBlock(g, decl, declaredName);
+                    break;
+                case "ControlDeclarationContext":
+                    localScopeInsideControl(g, decl, declaredName);
+                    break;
+                case "ProgramContext":
+                // global variables are not local scope, they are handled elsewhere 
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown scope " + scope);
+            }
+        }
+    }
+
+    private static void localScopeInsideControl(GraphTraversalSource g, Vertex decl, String declaredName) {
+
+        // go up to the declaring control declaration
+        g.V(decl)
+         .repeat(__.in(Dom.SYN))
+         .until(__.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"))
+
+        // beside the control declaration, select also the actions declared in that control
+         .<Vertex>union(
+                __.identity(),
+                __.repeat(__.outE(Dom.SYN)
+                            .has(Dom.Syn.E.RULE, "controlLocalDeclarations")
+                            .inV())
+                .emit()
+                .outE(Dom.SYN)
+                .has(Dom.Syn.E.RULE, "controlLocalDeclaration")
+                .inV()
+                .outE(Dom.SYN)
+                .has(Dom.Syn.E.RULE, "actionDeclaration")
+                .inV())
+
+        // move to the control body in case of the control declaration (won't do anything for actions)
+         .optional(__.outE(Dom.SYN)
+                    .has(Dom.Syn.E.RULE, "controlBody")
+                    .inV())
+
+        // select the blocks (the control's apply block, and the action bodies)
+         .outE(Dom.SYN)
+         .has(Dom.Syn.E.RULE, "blockStatement")
+         .inV()
+
+        // collect matching terminals under each list-node subtree
+         .repeat(__.out(Dom.SYN))
+         .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")
+                 .has(Dom.Syn.V.VALUE, declaredName))
+         .dedup()
+
+         .addE(Dom.SYMBOL).from(decl)
+         .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+         .iterate();
+
+    }
+
+    private static void localScopeInsideBlock(GraphTraversalSource g, Vertex decl, String declaredName) {
         // select matching terminals inside the block after the declaration
         // NOTE: the syntax tree contains the statements list reversed (rightmost in code is topmost in tree)
         // - go up until the list-node of the declaration (to omit it for collection)
-            .<Vertex>select("decl")
+           g.V(decl)
             .repeat(__.in(Dom.SYN))
             .until(__.has(Dom.Syn.V.CLASS, "StatOrDeclListContext"))
 
@@ -248,11 +325,10 @@ public class SymbolTableImpl
             // - collect matching terminals under each list-node subtree
             .repeat(__.out(Dom.SYN))
             .emit(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")
-                    .values("value")
-                    .where(P.eq("declaredName")))
+                    .has(Dom.Syn.V.VALUE, declaredName))
             .dedup()
 
-            .addE(Dom.SYMBOL).from("decl")
+            .addE(Dom.SYMBOL).from(decl)
             .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
             
             .iterate();
@@ -261,9 +337,11 @@ public class SymbolTableImpl
 
     // TODO is there variable covering? (e.g. action parameters cover control parameters?)
     // - if yes, start adding edges from the bottom, and don't add new edges to those who already have one
-    public static void parameterScope(GraphTraversalSource g){
+    public static void parameterAndInstantiationScope(GraphTraversalSource g){
         // find parameters
-        g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "ParameterContext")
+        g.V().hasLabel(Dom.SYN)
+            .or(__.has(Dom.Syn.V.CLASS, "ParameterContext"),
+                __.has(Dom.Syn.V.CLASS, "InstantiationContext"))
             .as("decl")
             .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME).inV()
             .values("value")
@@ -287,7 +365,7 @@ public class SymbolTableImpl
             .inV()
 
             // find all terminals that refer to the name declared by the parameter
-            .repeat(__.out(Dom.SYN))
+            .repeat(__.out(Dom.SYN).where(P.neq("decl")))
             .emit(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")
                     .values("value")
                     .where(P.eq("declaredName")))
@@ -349,6 +427,10 @@ public class SymbolTableImpl
             for(Vertex nameNode : chainEls){
                 String name = (String) g.V(nameNode).values("value").next();
 
+                if(name.equals("drop")){
+                    System.out.println(g.V(nameNode).elementMap().next());
+                }
+                
                 // if an element already has a scope, set the current context to the enclosing type of the declaration 
                 // - e.g. in "hdr.ipv4.ttl" the hdr can be scoped by paramater, we need its type to resolve which field scopes ipv4
                 List<Vertex> maybeNextContext =  
@@ -360,6 +442,7 @@ public class SymbolTableImpl
                     .toList(); 
 
                 if(!maybeNextContext.isEmpty()){
+
                     currentContext = maybeNextContext.get(0);
                     continue;
                 }
@@ -377,6 +460,8 @@ public class SymbolTableImpl
                     scopeCandidates = new LinkedList<>(globalScopeCandidates);
                 }
 
+
+
                 // find the field and method declaration that declares the name (and has the right arity). add the use into the scope of the declaration.
 
                 if(scopeCandidates.isEmpty()){
@@ -390,8 +475,7 @@ public class SymbolTableImpl
                     .until(
                         __.or(__.has(Dom.Syn.V.CLASS, "StructFieldContext"),
                               __.has(Dom.Syn.V.CLASS, "FunctionPrototypeContext"),
-                              __.has(Dom.Syn.V.CLASS, "ControlDeclarationContext")
-                              )
+                              __.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"))
                             // match name
                             .filter(
                             __.outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME).inV()
@@ -410,10 +494,11 @@ public class SymbolTableImpl
 
                 if(maybeDeclaration.isEmpty()){
                 // TODO is this silent fail or normal?
-//                    System.out.println(
-//                        String.format(
-//                            "Warning: no declaration found for name %s at vertex %s",
-//                            name, g.V(nameNode).elementMap().next()));
+//                    if(!Arrays.asList("isValid", "setValid", "setInvalid").contains(name))
+//                        System.out.println(
+//                            String.format(
+//                                "Warning: no declaration found for name %s at vertex %s",
+//                                name, g.V(nameNode).elementMap().next()));
                     continue;
                 } 
 
@@ -428,6 +513,7 @@ public class SymbolTableImpl
                 } 
 
                 Vertex declaration = maybeDeclaration.get(0);
+
 
                 g.V(declaration)
                   .addE(Dom.SYMBOL).to(nameNode)
@@ -453,12 +539,22 @@ public class SymbolTableImpl
                 .or(__.has(Dom.Syn.V.CLASS, "LvalueContext"),
                     __.has(Dom.Syn.V.CLASS, "ExpressionContext").outE(Dom.SYN).has(Dom.Syn.E.RULE, "DOT"),
                     __.has(Dom.Syn.V.CLASS, "ExpressionContext").outE(Dom.SYN).has(Dom.Syn.E.RULE, "argumentList"))
-                .filter(__.or(__.inE(Dom.SYN).has(Dom.Syn.E.RULE, "lvalue").outV()
-                                .inE(Dom.SYN).has(Dom.Syn.E.RULE, "lvalue"),
-                                __.inE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").outV()
-                                .inE(Dom.SYN).has(Dom.Syn.E.RULE, "expression")
-                                )
-                            .count().is(0))
+                .filter(__.inE(Dom.SYN).has(Dom.Syn.E.RULE, "lvalue").outV()
+                          .inE(Dom.SYN).has(Dom.Syn.E.RULE, "lvalue").outV()
+
+                          .or(__.has(Dom.Syn.V.CLASS, "LvalueContext"),
+                              __.has(Dom.Syn.V.CLASS, "ExpressionContext").outE(Dom.SYN).has(Dom.Syn.E.RULE, "DOT"),
+                              __.has(Dom.Syn.V.CLASS, "ExpressionContext").outE(Dom.SYN).has(Dom.Syn.E.RULE, "argumentList"))
+
+                          .count().is(0))
+                .filter(__.inE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").outV()
+                          .inE(Dom.SYN).has(Dom.Syn.E.RULE, "expression")
+
+                          .or(__.has(Dom.Syn.V.CLASS, "LvalueContext"),
+                              __.has(Dom.Syn.V.CLASS, "ExpressionContext").outE(Dom.SYN).has(Dom.Syn.E.RULE, "DOT"),
+                              __.has(Dom.Syn.V.CLASS, "ExpressionContext").outE(Dom.SYN).has(Dom.Syn.E.RULE, "argumentList"))
+
+                          .count().is(0))
                 .as("lv")
 
                 // in case this is a method call, find out the arity (otherwise this will return 0)
@@ -495,14 +591,13 @@ public class SymbolTableImpl
 
 //        long startTime = System.currentTimeMillis();
 
-        // from all table declarations
+        // from all table declarations select the node and name of each action action refs
         g.V().hasLabel(Dom.SYN)
             .has(Dom.Syn.V.CLASS, "TableDeclarationContext")
             .repeat(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "tablePropertyList").inV())
             .emit()
             .outE(Dom.SYN).has(Dom.Syn.E.RULE, "tableProperty").inV()
 
-        // select the name of each action action refs
             .repeat(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "actionList").inV())
             .emit()
             .outE(Dom.SYN).has(Dom.Syn.E.RULE, "actionRef").inV()
@@ -513,15 +608,25 @@ public class SymbolTableImpl
             .as("actRef")
             .values("value").as("actRefName")
 
-        // select those action declarations that declare the name of the currently selected action refs
-            .V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "ActionDeclarationContext").as("decl")
+            // go up to the control declaration that contains the application
+            .<Vertex>select("actRef")
+            .repeat(__.in(Dom.SYN))
+                        .until(__.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"))
+
+            // find the action declaration that declares the name of the applied action
+            .outE(Dom.SYN).has(Dom.Syn.E.RULE, "controlLocalDeclarations").inV()
+            .emit()
+            .repeat(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "controlLocalDeclarations").inV())
+            .outE(Dom.SYN).has(Dom.Syn.E.RULE, "controlLocalDeclaration").inV()
+            .outE(Dom.SYN).has(Dom.Syn.E.RULE, "actionDeclaration").inV()
+            .as("decl")
             .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME).inV()
             .values("value")
             .where(P.eq("actRefName"))
 
+            // add edge from declaration to the name node 
             .addE(Dom.SYMBOL).from("decl").to("actRef")
             .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
-            
             .iterate();
 
 //        long stopTime = System.currentTimeMillis();
@@ -533,6 +638,7 @@ public class SymbolTableImpl
 
         g.V().hasLabel(Dom.SYN)
             .has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext")
+            .filter(__.outE(Dom.SYN).has(Dom.Syn.E.RULE, "argumentList"))
             .outE(Dom.SYN).has(Dom.Syn.E.RULE, "lvalue").inV()
             .repeat(__.out(Dom.SYN))
             .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
@@ -655,40 +761,41 @@ public class SymbolTableImpl
 
     }
     
-    public static void controlAndParserInstantiations(GraphTraversalSource g){
-        // TODO this is quadratic!
-
-//        long startTime = System.currentTimeMillis();
-
-        g.V().hasLabel(Dom.SYN)
-                .has(Dom.Syn.V.CLASS, "InstantiationContext")
-            // find the argument-instantiations of the package instantiation
-                .repeat(__.out(Dom.SYN))
-                .until(__.has(Dom.Syn.V.CLASS, "ArgumentContext"))
-                .outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV()
-                .outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV()
-                .repeat(__.out(Dom.SYN))
-                .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")).as("argNode")
-                .values("value").as("argName")
-
-            // find controls and parser that declare the same name
-                .sideEffect(
-                __.V().hasLabel(Dom.SYN)
-                    .or(__.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"),
-                        __.has(Dom.Syn.V.CLASS, "ParserDeclarationContext"))
-                    .filter(__.outE(Dom.SYMBOL)
-                            .has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME)
-                            .inV()
-                            .values("value")
-                            .where(P.eq("argName"))) 
-                    .addE(Dom.SYMBOL).to("argNode")
-                    .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
-                    )
-            .iterate();
-                    
-//        long stopTime = System.currentTimeMillis();
-//        System.out.println(String.format("controlAndParserInstantiations. Time used: %s ms.", stopTime - startTime));
-    }
+// TODO delete this
+//     public static void controlAndParserInstantiations(GraphTraversalSource g){
+//         // TODO this is quadratic!
+// 
+// //        long startTime = System.currentTimeMillis();
+// 
+//         g.V().hasLabel(Dom.SYN)
+//                 .has(Dom.Syn.V.CLASS, "InstantiationContext")
+//             // find the argument-instantiations of the package instantiation
+//                 .repeat(__.out(Dom.SYN))
+//                 .until(__.has(Dom.Syn.V.CLASS, "ArgumentContext"))
+//                 .outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV()
+//                 .outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV()
+//                 .repeat(__.out(Dom.SYN))
+//                 .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")).as("argNode")
+//                 .values("value").as("argName")
+// 
+//             // find controls and parser that declare the same name
+//                 .sideEffect(
+//                 __.V().hasLabel(Dom.SYN)
+//                     .or(__.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"),
+//                         __.has(Dom.Syn.V.CLASS, "ParserDeclarationContext"))
+//                     .filter(__.outE(Dom.SYMBOL)
+//                             .has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME)
+//                             .inV()
+//                             .values("value")
+//                             .where(P.eq("argName"))) 
+//                     .addE(Dom.SYMBOL).to("argNode")
+//                     .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+//                     )
+//             .iterate();
+//                     
+// //        long stopTime = System.currentTimeMillis();
+// //        System.out.println(String.format("controlAndParserInstantiations. Time used: %s ms.", stopTime - startTime));
+//     }
 
 // TODO delete this (already added to resolveTypeRefs)
 //    private void fixBaseTypeType(GraphTraversalSource g) {
@@ -968,11 +1075,21 @@ public class SymbolTableImpl
 
     }
 
-    private static void fixGlobalConstantScopes(GraphTraversalSource g) {
+    private static void globalScopes(GraphTraversalSource g) {
         // note: this is copy-paste from fixEnum()
 
         List<Map<String, Object>> names = 
-            g.V().has(Dom.Syn.V.CLASS, "ConstantDeclarationContext").as("const")
+            g.V()
+             .or(__.has(Dom.Syn.V.CLASS, "ConstantDeclarationContext"),
+                 __.has(Dom.Syn.V.CLASS, "VariableDeclarationContext"),
+                 __.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"),
+                 __.has(Dom.Syn.V.CLASS, "ParserDeclarationContext"))
+             .as("const")
+             .filter(
+                 __.repeat(__.in(Dom.SYN)
+                             .not(__.has(Dom.Syn.V.CLASS, "BlockStatementContext"))
+                             .not(__.has(Dom.Syn.V.CLASS, "ControlDeclarationContext")))
+                   .until(__.has(Dom.Syn.V.CLASS, "ProgramContext")))
              .outE(Dom.SYMBOL)
              .has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME)
              .inV()

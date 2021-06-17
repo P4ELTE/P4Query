@@ -68,9 +68,13 @@ public class CallSitesImpl {
                 __.has(Dom.Syn.V.CLASS, "ParserDeclarationContext"))
             .as("decl")
             .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).inV()
+            .optional( 
+                __.inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE).outV()
+                  .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).inV())
             .repeat(__.in(Dom.SYN))
             .until(
-                __.or(__.has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext"),
+                __.or(__.has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext")
+                        .outE(Dom.SYN).has(Dom.Syn.E.RULE, "argumentList"),
                       __.has(Dom.Syn.V.CLASS, "DirectApplicationContext"),
                       __.has(Dom.Syn.V.CLASS, "InstantiationContext"),
                       __.has(Dom.Syn.V.CLASS, "ExpressionContext")
