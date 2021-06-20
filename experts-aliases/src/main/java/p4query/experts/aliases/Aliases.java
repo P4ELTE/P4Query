@@ -344,6 +344,8 @@ public class Aliases {
                         .has(Dom.Syn.V.CLASS, "DirectApplicationContext").or()
                         .has(Dom.Syn.V.CLASS, "ConditionalStatementContext").or()
                         .has(Dom.Syn.V.CLASS, "BlockStatementContext").or()
+                        .has(Dom.Syn.V.CLASS, "VariableDeclarationContext").or()
+                        .has(Dom.Syn.V.CLASS, "ConstantDeclarationContext").or()
                         .has(Dom.Syn.V.CLASS, "ParserBlockStatementContext").or()
                         .has(Dom.Syn.V.CLASS, "EmptyStatement").or()
                         .has(Dom.Syn.V.CLASS, "ExitStatement").or()

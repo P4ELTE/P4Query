@@ -306,6 +306,42 @@ public class SymbolTableImpl
          .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
          .iterate();
 
+
+        // scope the talbe keys as well
+
+        // go up to the declaring control declaration
+        g.V(decl)
+         .repeat(__.in(Dom.SYN))
+         .until(__.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"))
+
+        // find its tables
+         .repeat(__.outE(Dom.SYN)
+                   .has(Dom.Syn.E.RULE, "controlLocalDeclarations")
+                   .inV())
+         .emit()
+         .outE(Dom.SYN)
+         .has(Dom.Syn.E.RULE, "controlLocalDeclaration")
+         .inV()
+         .outE(Dom.SYN)
+         .has(Dom.Syn.E.RULE, "tableDeclaration")
+         .inV()
+
+        // find its key expressions
+         .repeat(__.out(Dom.SYN))
+         .until(__.has(Dom.Syn.V.CLASS, "KeyElementContext"))
+         .outE(Dom.SYN)
+         .has(Dom.Syn.E.RULE, "expression")
+         .inV()
+
+        // collect matching terminals under each list-node subtree
+         .repeat(__.out(Dom.SYN))
+         .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl")
+                  .has(Dom.Syn.V.VALUE, declaredName))
+         .dedup()
+
+         .addE(Dom.SYMBOL).from(decl)
+         .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+         .iterate();
     }
 
     private static void localScopeInsideBlock(GraphTraversalSource g, Vertex decl, String declaredName) {
@@ -426,10 +462,6 @@ public class SymbolTableImpl
 
             for(Vertex nameNode : chainEls){
                 String name = (String) g.V(nameNode).values("value").next();
-
-                if(name.equals("drop")){
-                    System.out.println(g.V(nameNode).elementMap().next());
-                }
                 
                 // if an element already has a scope, set the current context to the enclosing type of the declaration 
                 // - e.g. in "hdr.ipv4.ttl" the hdr can be scoped by paramater, we need its type to resolve which field scopes ipv4
