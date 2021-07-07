@@ -775,16 +775,14 @@ expression
     | expression '[' expression ':' expression ']'
     | '{' expressionList '}' 
     | '(' expression ')' 
-    // FIXME: the previous rule has the wrong precedence, and parses with        
-    // precedence weaker than casts.  There is no easy way to fix this in bison. 
-    | expression '(' argumentList ')'                                            
-    | namedType '(' argumentList ')'                                             
-	| '(' typeRef ')' expression // %prec PREFIX                                 
-    // LD: moved the previous ones (cf. spec): application should have higher precendence than usual operators.
     | typeName '.' name                                                          
     | ERROR '.' name                                                             
     | expression '.' name                                                        
     // LD: moved the previous ones (cf. spec): dot should have higher precendence than usual operators.
+    | expression '(' argumentList ')'                                            
+    | namedType '(' argumentList ')'                                             
+   	| '(' typeRef ')' expression // %prec PREFIX                                 
+    // LD: moved the previous ones (cf. spec): application should have higher precendence than usual operators.
     | '!' expression //%prec PREFIX
     | '~' expression //%prec PREFIX
     | '-' expression //%prec PREFIX
@@ -812,6 +810,8 @@ expression
     | expression '||' expression
     | expression '?' expression ':' expression
     | expression '<' realTypeArgumentList '>' '(' argumentList ')'               
+    // FIXME: the previous rule has the wrong precedence, and parses with        
+    // precedence weaker than casts.  There is no easy way to fix this in bison. 
     ;
 
 
