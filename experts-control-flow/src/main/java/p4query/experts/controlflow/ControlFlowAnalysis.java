@@ -16,6 +16,7 @@
  */
 package p4query.experts.controlflow;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -66,8 +67,24 @@ public class ControlFlowAnalysis {
         //        ps.close();
         //        System.exit(0);
 
-            System.out.println(ControlFlow.class.getSimpleName() + " started.");
-
+        System.out.println(ControlFlow.class.getSimpleName() + " started.");
+        System.out.println("========");
+        //why all, not just ord 0?
+        // g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").outE().has(Dom.Syn.E.ORD, 0).inV().V()
+            
+            // firstTaskDynamic(g, 2);
+            
+            firstTaskDynamicAny(g, "hdr#ethernet#dstAddr");
+            firstTaskDynamicAny(g, "hdr#ipv4#ttl");
+            // keys =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").outE().has(Dom.Syn.E.ORD, 0).inV().has(Dom.Syn.V.CLASS, "NameContext")
+            // .group()
+            // .by(__.values(Dom.Syn.V.NODE_ID))
+            // .by(__.values(Dom.Syn.V.CLASS)).next();
+            // System.out.println(keys);
+            
+            // firstTaskManual(g);
+            
+            
             addFlowToFirstStatement(g);
             addFlowToTwoWayConditionals(g);
             addFalseFlowToOneWayConditionals(g);
@@ -79,9 +96,159 @@ public class ControlFlowAnalysis {
 
             quickfixSelectInCFG(g);
 
+            System.exit(1);
             long stopTime = System.currentTimeMillis();
             System.out.println(String.format("%s complete. Time used: %s ms.", ControlFlow.class.getSimpleName() , stopTime - startTime));
             return new Status();
+        }
+
+        private static void firstTaskDynamicAny(GraphTraversalSource g, String toSearch){
+            int[] ords = {0,2};
+            String[] values = toSearch.split("#");
+
+            for( int ord : ords){
+                ArrayList<Object> lines = new ArrayList<Object>();
+                for(int i = 0; i<values.length; ++i){
+                    System.out.print(values[i] + (i+1 < values.length?".":"\n"));
+                    Map<Object,Object> keys =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").outE().has(Dom.Syn.E.ORD, ord).inV()
+                    .repeat(__.outE(Dom.SYN).inV())
+                    .until(__.has(Dom.Syn.V.VALUE, values[i]))
+                    
+                    .group()
+                    .by(__.values(Dom.Syn.V.NODE_ID))
+                    .by(__.values(Dom.Syn.V.LINE)).next();
+                    // System.out.print("keys " + values[i] +": ");
+                    // System.out.println(keys);
+                    if (i == 0){
+                        for (Map.Entry<Object,Object> key : keys.entrySet()){
+                            lines.add(key.getValue());
+                        }
+                    }else{
+                        ArrayList<Object> tmp = new ArrayList<Object>();
+                        for (Map.Entry<Object,Object> key : keys.entrySet()){
+                            for(Object line : lines){
+                                if(line.equals(key.getValue())){
+                                    tmp.add(line);
+                                }
+                            }
+                        }
+                        // System.out.print("lines before ");
+                        // System.out.println(lines);
+                        lines = tmp;
+                        // System.out.print("lines after ");
+                        // System.out.println(lines);
+                    }
+                }
+                
+                System.out.print("On the " + (ord == 0? "left":"right") + ": \n");
+
+                for(Object line : lines){
+                    System.out.println("line: " + line);
+                }
+            }
+            System.out.println("----------------");
+        }
+
+        private static void firstTaskDynamic(GraphTraversalSource g, int ord){
+            Map<Object,Object> keys_hdr =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").outE().has(Dom.Syn.E.ORD, ord).inV()
+            .repeat(__.outE(Dom.SYN).inV())
+            .until(__.has(Dom.Syn.V.VALUE, "hdr"))
+            
+            .group()
+            .by(__.values(Dom.Syn.V.NODE_ID))
+            .by(__.values(Dom.Syn.V.LINE)).next();
+            //System.out.println(keys_hdr);
+
+            Map<Object,Object> keys_ethernet =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").outE().has(Dom.Syn.E.ORD, ord).inV()
+            .repeat(__.outE(Dom.SYN).inV())
+            .until(__.has(Dom.Syn.V.VALUE, "ethernet"))
+            
+            .group()
+            .by(__.values(Dom.Syn.V.NODE_ID))
+            .by(__.values(Dom.Syn.V.LINE)).next();
+            //System.out.println(keys_ethernet);
+
+            Map<Object,Object> keys_dstAddr =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").outE().has(Dom.Syn.E.ORD, ord).inV()
+            .repeat(__.outE(Dom.SYN).inV())
+            .until(__.has(Dom.Syn.V.VALUE, "dstAddr"))
+            
+            .group()
+            .by(__.values(Dom.Syn.V.NODE_ID))
+            .by(__.values(Dom.Syn.V.LINE)).next();
+            //System.out.println(keys_dstAddr);
+
+            ArrayList<Object> line_on_left = new ArrayList<Object>();
+            for (Map.Entry<Object,Object> hdr : keys_hdr.entrySet()){
+                for (Map.Entry<Object,Object> ethernet : keys_ethernet.entrySet()){
+                    if(hdr.getValue().equals(ethernet.getValue())){
+                        for (Map.Entry<Object,Object> dstAddr : keys_dstAddr.entrySet()){
+                            if(hdr.getValue().equals(dstAddr.getValue())){
+                                line_on_left.add(dstAddr.getValue());
+                            }
+                        }
+                    }                    
+                }
+            }
+            System.out.print("On the " + (ord == 0? "left":"right") + ": line: ");
+
+            for(Object line : line_on_left){
+                System.out.println(line);
+            }
+        }
+
+        private static void firstTaskManual(GraphTraversalSource g){
+            System.out.print("On the right: ");
+            //repeat until - feltetel teljesul
+            /*
+            outE inV a syn eleken
+            keys =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext")
+            .repeat(__.out(Dom.SYN))
+            .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+            */
+            Boolean found = true;
+            Map<Object, Object> keys =
+            g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext")
+            .outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV().has(Dom.Syn.V.CLASS, "ExpressionContext").outE().inV().has(Dom.Syn.V.CLASS, "ExpressionContext")
+            .outE().inV().has(Dom.Syn.V.CLASS, "ExpressionContext").outE().inV().has(Dom.Syn.V.CLASS, "NonTypeNameContext")
+            .outE().inV().has(Dom.Syn.V.CLASS, "Type_or_idContext")
+            .outE().inV().has(Dom.Syn.V.CLASS, "TerminalNodeImpl").has(Dom.Syn.V.VALUE, "hdr")
+            .group()
+            .by(__.values(Dom.Syn.V.NODE_ID))
+            .by(__.values(Dom.Syn.V.LINE)).next();
+            found = found && keys.size() > 0;
+
+            keys = 
+            g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext")
+            .outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV().has(Dom.Syn.V.CLASS, "ExpressionContext").outE().inV().has(Dom.Syn.V.CLASS, "ExpressionContext")
+            .outE().inV().has(Dom.Syn.V.CLASS, "NameContext").outE().inV().has(Dom.Syn.V.CLASS, "NonTypeNameContext")
+            .outE().inV().has(Dom.Syn.V.CLASS, "Type_or_idContext")
+            .outE().inV().has(Dom.Syn.V.CLASS, "TerminalNodeImpl").has(Dom.Syn.V.VALUE, "ethernet")
+            .group()
+            .by(__.values(Dom.Syn.V.NODE_ID))
+            .by(__.values(Dom.Syn.V.LINE)).next();
+
+            //System.out.println("---------------------- Keys --------------------\n" + keys);
+            
+
+
+            //System.out.println("---------------------- Keys --------------------\n" + keys);
+            found = found && keys.size() > 0;
+            keys = g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext")
+            .outE(Dom.SYN).has(Dom.Syn.E.RULE, "expression").inV().has(Dom.Syn.V.CLASS, "ExpressionContext").outE().inV().has(Dom.Syn.V.CLASS, "NameContext")
+            .outE().inV().has(Dom.Syn.V.CLASS, "NonTypeNameContext").outE().inV().has(Dom.Syn.V.CLASS, "Type_or_idContext")
+            .outE().inV().has(Dom.Syn.V.CLASS, "TerminalNodeImpl").has(Dom.Syn.V.VALUE, "dstAddr")
+            .group()
+            .by(__.values(Dom.Syn.V.NODE_ID))
+            .by(__.values(Dom.Syn.V.LINE)).next();
+
+            //System.out.println("---------------------- Keys --------------------\n" + keys);
+            found = found && keys.size() > 0;
+
+            
+            if(found){
+                for (Map.Entry<Object,Object> entry : keys.entrySet())
+                    System.out.println("line: " + entry.getValue());
+            }
         }
 
         // send flow from each block to its first statement (possibly another block)
