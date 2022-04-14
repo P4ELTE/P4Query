@@ -73,9 +73,10 @@ public class ControlFlowAnalysis {
         // g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").outE().has(Dom.Syn.E.ORD, 0).inV().V()
             
             // firstTaskDynamic(g, 2);
+            secondTaskDynamicAny(g, "hdr.ipv4.isValid()");
             
-            firstTaskDynamicAny(g, "hdr#ethernet#dstAddr");
-            firstTaskDynamicAny(g, "hdr#ipv4#ttl");
+            // firstTaskDynamicAny(g, "hdr.ethernet.dstAddr");
+            // firstTaskDynamicAny(g, "hdr.ipv4.ttl");
             // keys =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").outE().has(Dom.Syn.E.ORD, 0).inV().has(Dom.Syn.V.CLASS, "NameContext")
             // .group()
             // .by(__.values(Dom.Syn.V.NODE_ID))
@@ -102,9 +103,54 @@ public class ControlFlowAnalysis {
             return new Status();
         }
 
+        private static void secondTaskDynamicAny(GraphTraversalSource g, String toSearch){
+            String[] values = toSearch.substring(0, toSearch.length()-2).split("\\.");
+
+            ArrayList<Object> lines = new ArrayList<Object>();
+            for(int i = 0; i<values.length; ++i){
+                // System.out.print(values[i] + (i+1 < values.length?".":"\n"));
+                Map<Object,Object> keys =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "ConditionalStatementContext").outE().inV()
+                .repeat(__.outE(Dom.SYN).inV())
+                .until(__.has(Dom.Syn.V.VALUE, values[i]))
+                
+                .group()
+                .by(__.values(Dom.Syn.V.NODE_ID))
+                .by(__.values(Dom.Syn.V.LINE)).next();
+                // System.out.print("keys " + values[i] +": ");
+                // System.out.println(keys);
+                if (i == 0){
+                    for (Map.Entry<Object,Object> key : keys.entrySet()){
+                        lines.add(key.getValue());
+                    }
+                }else{
+                    ArrayList<Object> tmp = new ArrayList<Object>();
+                    for (Map.Entry<Object,Object> key : keys.entrySet()){
+                        for(Object line : lines){
+                            if(line.equals(key.getValue())){
+                                tmp.add(line);
+                            }
+                        }
+                    }
+                    // System.out.print("lines before ");
+                    // System.out.println(lines);
+                    lines = tmp;
+                    // System.out.print("lines after ");
+                    // System.out.println(lines);
+                }
+                
+                
+            }
+            System.out.println(toSearch + " is on line(s):");
+
+            for(Object line : lines){
+                System.out.println(line);
+            }
+            System.out.println("----------------");
+        }
+
         private static void firstTaskDynamicAny(GraphTraversalSource g, String toSearch){
             int[] ords = {0,2};
-            String[] values = toSearch.split("#");
+            String[] values = toSearch.split("\\.");
 
             for( int ord : ords){
                 ArrayList<Object> lines = new ArrayList<Object>();
