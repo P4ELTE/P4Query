@@ -73,7 +73,14 @@ public class ControlFlowAnalysis {
         // g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").outE().has(Dom.Syn.E.ORD, 0).inV().V()
             
             // firstTaskDynamic(g, 2);
-            secondTaskDynamicAny(g, "hdr.ipv4.isValid()");
+            //secondTaskDynamicAny(g, "hdr.ipv4.isValid()");
+            /*Map<Object,Object> keys =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "ControlTypeDeclarationContext").outE().inV()
+                .repeat(__.outE(Dom.SYN).inV())
+                .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))                
+                .group()
+                .by(__.values(Dom.Syn.V.LINE))
+                .by(__.values(Dom.Syn.V.VALUE)).next();*/
+            
             
             // firstTaskDynamicAny(g, "hdr.ethernet.dstAddr");
             // firstTaskDynamicAny(g, "hdr.ipv4.ttl");
@@ -81,7 +88,7 @@ public class ControlFlowAnalysis {
             // .group()
             // .by(__.values(Dom.Syn.V.NODE_ID))
             // .by(__.values(Dom.Syn.V.CLASS)).next();
-            // System.out.println(keys);
+            secondTaskDynamicAnyWithControl(g, "hdr.ipv4.isValid()");
             
             // firstTaskManual(g);
             
@@ -101,6 +108,77 @@ public class ControlFlowAnalysis {
             long stopTime = System.currentTimeMillis();
             System.out.println(String.format("%s complete. Time used: %s ms.", ControlFlow.class.getSimpleName() , stopTime - startTime));
             return new Status();
+        }
+
+        private static void secondTaskDynamicAnyWithControl(GraphTraversalSource g, String toSearch){
+            String[] values = toSearch.substring(0, toSearch.length()-2).split("\\.");
+            ArrayList<Object> control = new ArrayList<>();
+
+            
+
+            ArrayList<Object> lines = new ArrayList<Object>();
+            for(int i = 0; i<values.length; ++i){
+                // System.out.print(values[i] + (i+1 < values.length?".":"\n"));
+                Map<Object,Object> keys =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "ConditionalStatementContext").outE().inV()
+                .repeat(__.outE(Dom.SYN).inV())
+                .until(__.has(Dom.Syn.V.VALUE, values[i]))
+                .repeat(__.inE().outV())
+                .until(__.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"))
+                .outE(Dom.SYN).inV().has(Dom.Syn.V.CLASS, "ControlTypeDeclarationContext")
+                .outE(Dom.SYN).inV().has(Dom.Syn.V.CLASS, "NameContext")
+                .repeat(__.outE(Dom.SYN).inV())
+                .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))   
+                .group()
+                .by(__.values(Dom.Syn.V.NODE_ID))
+                .by(__.values(Dom.Syn.V.VALUE)).next();
+                for (Map.Entry<Object,Object> key : keys.entrySet()){
+                    if (!control.contains(key.getValue())){
+                        control.add(key.getValue());
+                    }
+                }
+                
+
+                keys =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "ConditionalStatementContext").outE().inV()
+                .repeat(__.outE(Dom.SYN).inV())
+                .until(__.has(Dom.Syn.V.VALUE, values[i]))
+                
+                .group()
+                .by(__.values(Dom.Syn.V.NODE_ID))
+                .by(__.values(Dom.Syn.V.LINE)).next();
+                // System.out.print("keys " + values[i] +": ");
+                // System.out.println(keys);
+                if (i == 0){
+                    for (Map.Entry<Object,Object> key : keys.entrySet()){
+                        lines.add(key.getValue());
+                    }
+                }else{
+                    ArrayList<Object> tmp = new ArrayList<Object>();
+                    for (Map.Entry<Object,Object> key : keys.entrySet()){
+                        for(Object line : lines){
+                            if(line.equals(key.getValue())){
+                                tmp.add(line);
+                            }
+                        }
+                    }
+                    // System.out.print("lines before ");
+                    // System.out.println(lines);
+                    lines = tmp;
+                    // System.out.print("lines after ");
+                    // System.out.println(lines);
+                }
+                
+                
+            }
+            System.out.println(toSearch + " is on line(s):");
+
+            for(Object line : lines){
+                System.out.println(line);
+            }
+            System.out.println("----------------");
+            System.out.println("In control: ");
+            for(Object c : control){
+                System.out.println(c);
+            }
         }
 
         private static void secondTaskDynamicAny(GraphTraversalSource g, String toSearch){
