@@ -16,18 +16,26 @@
  */
 package p4query.experts.controlflow;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.stream.Stream;
 
 import javax.inject.Singleton;
 
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -74,12 +82,7 @@ public class ControlFlowAnalysis {
             
             // firstTaskDynamic(g, 2);
             //secondTaskDynamicAny(g, "hdr.ipv4.isValid()");
-            /*Map<Object,Object> keys =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "ControlTypeDeclarationContext").outE().inV()
-                .repeat(__.outE(Dom.SYN).inV())
-                .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))                
-                .group()
-                .by(__.values(Dom.Syn.V.LINE))
-                .by(__.values(Dom.Syn.V.VALUE)).next();*/
+            
             
             
             // firstTaskDynamicAny(g, "hdr.ethernet.dstAddr");
@@ -88,11 +91,37 @@ public class ControlFlowAnalysis {
             // .group()
             // .by(__.values(Dom.Syn.V.NODE_ID))
             // .by(__.values(Dom.Syn.V.CLASS)).next();
-            secondTaskDynamicAnyWithControl(g, "hdr.ipv4.isValid()");
+            //secondTaskDynamicAnyWithControl(g, "hdr.ipv4.isValid()");
             
             // firstTaskManual(g);
+            Map<Object,Object> keys =  g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "TerminalNodeImpl")
+                .group()
+                .by(__.values(Dom.Syn.V.NODE_ID))
+                .by(__.values(Dom.Syn.V.VALUE)).next();
+           
             
             
+            try {
+                ArrayList<String> code = new ArrayList<>();
+                SortedSet<Object> keysSet = new TreeSet<>(keys.keySet());
+                for (Object key : keysSet) { 
+                    code.add(keys.get(key).toString());
+                // do something
+                }
+                // Stream<Map.Entry<Object, Object>> sorted = keys.entrySet().stream().sorted();
+                // sorted.forEach(a -> {
+                //     code.add(a.getValue().toString());
+                // });
+                // for (Map.Entry<Object,Object> key : keys.entrySet()){
+                //     code.add(key.getValue().toString());
+                // }
+                whenWriteStringUsingBufferedWritter_thenCorrect("e:/ProgramFiles/Labor/asd.txt", code);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            
+            // getCodeFromGraph(g);
+
             addFlowToFirstStatement(g);
             addFlowToTwoWayConditionals(g);
             addFalseFlowToOneWayConditionals(g);
@@ -108,6 +137,100 @@ public class ControlFlowAnalysis {
             long stopTime = System.currentTimeMillis();
             System.out.println(String.format("%s complete. Time used: %s ms.", ControlFlow.class.getSimpleName() , stopTime - startTime));
             return new Status();
+        }
+
+        public void whenWriteStringUsingBufferedWritter_thenCorrect(String filename, ArrayList<String> code) 
+        throws IOException {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
+            int tabsNeeded = 0;
+            for(int i = 0;i<code.size();++i){
+                // System.out.println(i + " " + tabsNeeded + " " + code.get(i));                
+                String toWrite = "";
+                while(i < code.size() && 
+                    !(code.get(i).equals(";") || code.get(i).equals("\\{") || code.get(i).equals("\\}"))){
+                        
+                        if(code.get(i).equals("bit")){
+                            toWrite += code.get(i) + code.get(i+1) + code.get(i+2) + code.get(i+3) + " ";
+                            i+=3;
+                        }else if(i < code.size()-1 && code.get(i+1).equals(".")){
+                            toWrite = code.get(i) + code.get(i+1) + code.get(i+2);
+                            i+=3;
+                            Boolean isMoreDot = true;
+                            while(isMoreDot && i<code.size()){
+                                if(code.get(i).equals(".")){
+                                    toWrite += code.get(i) + code.get(i+1);
+                                    i+=2;
+                                }else{
+                                    isMoreDot = false;
+                                    toWrite += " " + code.get(i) + " ";
+                                }
+                            }
+                            
+                        }else{
+                            toWrite += code.get(i) + " ";
+                        }
+                        i+=1;
+                }
+                if(code.get(i).equals("\\{")){
+                    tabsNeeded++;
+                }else if(code.get(i).equals("\\}")){
+                    tabsNeeded--;
+                }
+                if(code.get(i).equals(";") || code.get(i).equals("\\{") || code.get(i).equals("\\}")){
+                    toWrite = code.get(i).equals(";")?
+                        toWrite.substring(0, toWrite.length()-1) + code.get(i):
+                        toWrite + code.get(i);
+                }
+                
+                toWrite = (code.get(i).equals("\\{") ? 
+                    new String(new char[tabsNeeded-1]).replace("\0", "\t"):
+                    new String(new char[tabsNeeded]).replace("\0", "\t")) + toWrite;
+                writer.write(
+                    toWrite.replace(";", ";\n")
+                    .replace("\\", "")
+                    .replace("{", "{\n")
+                    .replace("}", "}\n") + " ");
+            }
+            
+            writer.close();
+        }
+
+        private static void  getCodeFromGraph(GraphTraversalSource g){       
+            recursiveWrite(g.V().has(Dom.Syn.V.NODE_ID, 0));  
+            
+            
+        }
+
+        private static void recursiveWrite(GraphTraversal<Vertex, Vertex> g){   
+            // Map<Object, Object> keys =  g.outE(Dom.SYN)
+            //     .group()
+            //     .by(__.values(Dom.Syn.E.ORD))
+            //     .by(__.values(Dom.Syn.E.RULE)).next();
+            // if(keys.size()>0){
+            //     int limit = 0;
+            //     for (Map.Entry<Object,Object> key : keys.entrySet()){
+            //         int ord = Integer.parseInt(key.getKey().toString());                    
+            //         if(ord > limit){
+            //             limit = ord;
+            //         }
+            //     }
+            //     for(int i = 0; i<=limit;++i){
+            //         recursiveWrite(g.outE(Dom.SYN).has(Dom.Syn.E.ORD, i).inV()); 
+            //         // itt ne rekurziv legyen, csak egy lepes elsore, mit ir ki
+            //         // minden levélcsúcs terminal node-okat szedjem ki TerminalNodeImpl
+            //         // csak annka van value-ja
+            //         // linet is nézhetünk
+            //     }
+            // }else{
+            //     keys =  g
+            //     .group()
+            //     .by(__.values(Dom.Syn.V.NODE_ID))
+            //     .by(__.values(Dom.Syn.V.VALUE)).next();
+
+            //     for (Map.Entry<Object,Object> key : keys.entrySet()){
+            //         System.out.print(key.getValue() + " ");
+            //     }
+            // }
         }
 
         private static void secondTaskDynamicAnyWithControl(GraphTraversalSource g, String toSearch){
