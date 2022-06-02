@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir.exprs;
 
@@ -22,9 +24,10 @@ import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSo
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
-import p4query.applications.smc.hir.Definition;
+import p4query.applications.smc.hir.CompilerState;
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.LocalMemoryLayout;
+import p4query.applications.smc.hir.p4api.Definition;
 import p4query.applications.smc.hir.typing.IRType;
 import p4query.applications.smc.lir.iset.StackInstruction;
 import p4query.ontology.Dom;
@@ -37,44 +40,73 @@ public interface Expression {
 
     // compileToLIR is expected to push (or load) the value (or address) of the expression on the stack.  
     public List<StackInstruction> compileToLIR(LocalMemoryLayout local, GlobalMemoryLayout global );
-    public int getSizeHint();
+//     public int getSizeHint();
+    public IRType getTypeHint();
 
     public static class Factory {
         private Factory() {
         }
 
-        public static Expression create(GraphTraversalSource g, Vertex v, IRType.SingletonFactory typeFactory, Definition parentDef, int sizeHint) {
-            if (g.V(v).outE(Dom.SYN).has(Dom.Syn.E.RULE, "expressionList").hasNext()) {
-                System.err.println("Warning: Expression lists are not implemented");
-                return null;
+        public static Expression createLvalue(CompilerState state, Vertex v) {
+            GraphTraversalSource g = state.getG();
+
+            for (int i = 0; i < 2; i++) {
+                try {
+                    switch(i){
+                        case 0: return new P4StorageReference(state, v);
+                        case 1: return handleDot(state, v);
+                    }
+                } catch(UnableToParseException e){
+                    continue;
+                }
             }
 
-            if (g.V(v).outE(Dom.SYN).has(Dom.Syn.E.RULE, "keysetExpression").hasNext()){
-                return new SelectKeyExpression(g, v, typeFactory, parentDef);
-            }
-
-            if (g.V(v).outE(Dom.SYN).has(Dom.Syn.E.RULE, "argumentList").hasNext())
-                return new ProcedureCallExpression(g, v, typeFactory, parentDef);
-
-            if (g.V(v).outE(Dom.SYN)
-                    .or(__.has(Dom.Syn.E.RULE, "nonTypeName"), __.has(Dom.Syn.E.RULE, "prefixedNonTypeName")).hasNext())
-                return new P4StorageReference(g, v, typeFactory);
-
-            if (g.V(v).outE(Dom.SYN).has(Dom.Syn.E.RULE, "DOT").hasNext()) {
-                return handleDot(g, v, typeFactory);
-            }
-
-            if (g.V(v).outE(Dom.SYN).or(__.has(Dom.Syn.E.RULE, "MINUS"), __.has(Dom.Syn.E.RULE, "PLUS")).hasNext())
-                return new ArithmeticExpression(g, v, typeFactory, parentDef, sizeHint);
-
-            if (g.V(v).outE(Dom.SYN).or(__.has(Dom.Syn.E.RULE, "INTEGER")).hasNext())
-                return new LiteralExpression(g, v, typeFactory, parentDef, sizeHint);
-
-            System.err.println(g.V(v).elementMap().next());
-            throw new IllegalArgumentException(String.format("Cannot create expression from vertex %s", v));
+            throw new IllegalArgumentException(String.format("Cannot create lvalue expression from vertex %s (%s)", v, g.V(v).elementMap().next()));
         }
 
-        private static Expression handleDot(GraphTraversalSource g, Vertex v, IRType.SingletonFactory typeFactory) {
+        public static Expression create(CompilerState state, Vertex v, IRType typeHint) {
+
+            GraphTraversalSource g = state.getG();
+
+            for (int i = 0; i < 9; i++) {
+                try {
+                    switch(i){
+                        case 0:
+                            return new ListExpression(state, v, typeHint);
+                        case 1:
+                            return new SelectKeyExpression(state, v, typeHint);
+                        case 2:
+                            return new ProcedureCallExpression(state, v);
+                        case 3:
+                            return new P4StorageReference(state, v);
+                        case 4:
+                            return handleDot(state, v);
+                        case 5:
+                            return new BinaryExpression(state, v, typeHint);
+                        case 6:
+                            return new UnaryExpression(state, v, typeHint);
+                        case 7:
+                            return new LiteralExpression(state, v, typeHint);
+                        case 8:
+                            return new BitSliceExpression(state, v, typeHint);
+                    }
+                } catch(UnableToParseException e){
+                    continue;
+                }
+            }
+
+            System.err.println(g.V(v).elementMap().next());
+            throw new IllegalArgumentException(String.format("Cannot create expression from vertex %s (%s)", v, g.V(v).elementMap().next()));
+        }
+
+        // static dispatch
+        private static Expression handleDot(CompilerState state, Vertex v) throws UnableToParseException {
+
+            GraphTraversalSource g = state.getG();
+
+            if (!g.V(v).outE(Dom.SYN).has(Dom.Syn.E.RULE, "DOT").hasNext()) {
+                throw new UnableToParseException(P4StorageReference.class, v);
+            }
 
             Vertex leftMostField = 
                 g.V(v).repeat(__.outE(Dom.SYN)
@@ -102,12 +134,13 @@ public interface Expression {
                  .next();
 
             if(type.equals("StructTypeDeclarationContext")){
-                return new P4StorageReference(g, v, typeFactory);
+                return new P4StorageReference(state, v, true);
             } else if(type.equals("HeaderTypeDeclarationContext")){
-                return new P4StorageReference(g, v, typeFactory);
+                return new P4StorageReference(state, v, true);
+            } else if(type.equals("TableDeclarationContext")){
+                return new InlineTableApplication(state, v);
             } else if (type.equals("EnumDeclarationContext")){
-                System.err.println("Warning: enum expression encountered. Ignoring.");
-                return null;
+                return new EnumExpression(state, v);
             } else {
                 System.err.println(g.V(v).elementMap().next());
                 System.err.println(type);

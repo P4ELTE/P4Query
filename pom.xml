@@ -144,6 +144,7 @@
                     <excludes>
                         <exclude>**/conf/**</exclude>
                         <exclude>**/*.p4</exclude>
+                        <exclude>experts-smc/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>

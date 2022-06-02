@@ -24,19 +24,13 @@ import javax.inject.Qualifier;
 public interface P4FileProvider {
     @Qualifier
     @Retention(RetentionPolicy.RUNTIME)
-    public @interface CoreP4File {
-        
-    }
-
-    @Qualifier
-    @Retention(RetentionPolicy.RUNTIME)
-    public @interface V1ModelP4File {
-        
-    }
-
-    @Qualifier
-    @Retention(RetentionPolicy.RUNTIME)
     public @interface InputP4File {
+
+    }
+
+    @Qualifier
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface P4Include {
 
     }
 }

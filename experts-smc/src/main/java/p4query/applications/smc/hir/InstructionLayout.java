@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +13,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir;
 
+import java.io.PrintStream;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
+import p4query.applications.smc.hir.p4api.Declaration;
 import p4query.applications.smc.lir.LabelledStackInstruction;
 import p4query.applications.smc.lir.iset.Comment;
 import p4query.applications.smc.lir.iset.InterProcJumping;
@@ -67,10 +73,25 @@ public class InstructionLayout {
 
         private Map<Vertex, Vertex> cjmps = new HashMap<>();
         private Map<Vertex, Vertex> jmps = new HashMap<>();
+        private Set<Vertex> earlyExits = new HashSet<>();
 
         private LinkedHashMap<StackInstruction, Integer> index = new LinkedHashMap<>();
 
         private Map<String, StackInstruction> procStarts = new HashMap<>();
+
+        private Map<String, StackInstruction> procExits = new HashMap<>();
+
+
+        public Builder(){
+        }
+
+        public Builder(Builder b){
+            this.origins = b.origins;
+            this.cjmps = b.cjmps;
+            this.jmps = b.jmps;
+            this.index = b.index;
+            this.procStarts = b.procStarts;
+        }
 
         public void register(Vertex v, StackInstruction inst){
             List<StackInstruction> insts = origins.get(v);
@@ -88,6 +109,12 @@ public class InstructionLayout {
             this.jmps.putAll(jmps);
         }
 
+        public void registerAllEarlyExits(Set<Vertex> earlyExits) {
+                this.earlyExits.addAll(earlyExits);
+        }
+
+
+
         public void registerAll(Vertex v, List<StackInstruction> inst){
             List<StackInstruction> insts = origins.get(v);
             if(insts == null){
@@ -98,19 +125,20 @@ public class InstructionLayout {
         }
 
         // TODO namespace
-		public void registerProc(Definition procDef, StackInstruction inst) {
-            procStarts.put(procDef.getName(), inst);
-		}
+        public void registerProc(Declaration procDef, StackInstruction inst, StackInstruction exit) {
+                procStarts.put(procDef.getName(), inst);
+                procExits.put(procDef.getName(), exit);
+        }
 
         // TODO this should make a deep copy
-        public InstructionLayout build(List<StackInstruction> insts){
+        public InstructionLayout build(List<StackInstruction> insts, boolean nondet){
             indexInstructions(insts);
             resolveIntraProcJumps(insts);
             resolveInterProcJumps(insts);
 
             List<LabelledStackInstruction> insts2 = new LinkedList<>();
             for (StackInstruction inst : insts) {
-                insts2.add(new LabelledStackInstruction(index.get(inst), inst));
+                insts2.add(new LabelledStackInstruction(index.get(inst), inst, nondet));
             }
             return new InstructionLayout(insts2);
         }
@@ -148,16 +176,12 @@ public class InstructionLayout {
 
             IntraProcJumping jmp = (IntraProcJumping) inst;
             if(jmp.getDest() instanceof UnresolvedVertexLabel){
+
                 UnresolvedVertexLabel dest = (UnresolvedVertexLabel) jmp.getDest();
-                Vertex dstVert = findDstVert(dest);
-
-    //            System.out.println(origins);
-    //            System.out.println(jmp);
-    //            System.out.println(cjmps);
-
-                StackInstruction targetInst = getFirst(dstVert);
+                StackInstruction targetInst = findTargetInst(dest);
                 int labNo = findLabNo(insts, targetInst);
                 jmp.setDest(new Label(labNo, dest.getComment()));
+
             } else if (jmp.getDest() instanceof UnresolvedInstructionLabel){
                 UnresolvedInstructionLabel dest = (UnresolvedInstructionLabel) jmp.getDest();
                 StackInstruction targetInst = dest.getTarget();
@@ -167,18 +191,26 @@ public class InstructionLayout {
             }
         }
 
-        private Vertex findDstVert(UnresolvedVertexLabel dest) {
-                Vertex srcVert = (Vertex) dest.getVertex();
+        private StackInstruction findTargetInst(UnresolvedVertexLabel dest) {
+            Vertex srcVert = (Vertex) dest.getVertex();
 
-                Vertex dstVert = this.cjmps.get(srcVert);
+            if(earlyExits.contains(srcVert)){
+                return procExits.get(dest.getParent().getName());
+            }
 
-                if(dstVert == null)
-                    dstVert = this.jmps.get(srcVert);
+            Vertex dstVert = this.cjmps.get(srcVert);
 
-                if(dstVert == null)
-                    throw new IllegalStateException("Unable to find jump target for vertex " + srcVert);
+            if(dstVert == null)
+                dstVert = this.jmps.get(srcVert);
 
-                return dstVert;
+            if(dstVert == null){
+                System.err.println(dest);
+                System.err.println(jmps);
+                System.err.println(cjmps);
+                throw new IllegalStateException("Unable to find jump target for vertex " + srcVert);
+            }
+
+            return getFirst(dstVert);
         }
 
         private int findLabNo(List<StackInstruction> insts, StackInstruction targetInst){
@@ -223,8 +255,7 @@ public class InstructionLayout {
 
                 StackInstruction destInst = procStarts.get(dest.getName());
                 if(destInst == null){
-                    System.err.println("Warning: no declaration registered for procedure " + dest.getName());
-                    continue;
+                    throw new IllegalStateException("No definition registered for procedure " + dest.getNamespace() + "::" + dest.getName());
                 }
 
                 int labNo = findLabNo(insts, destInst);
@@ -243,4 +274,13 @@ public class InstructionLayout {
         }
         return strs;
     }
+
+
+    public void toPrism(PrintStream os){
+        for (LabelledStackInstruction inst : insts) {
+            inst.toPrism(os);
+        }
+    } 
+
+
 }

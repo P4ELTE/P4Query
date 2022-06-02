@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.inject.Singleton;
 import javax.xml.parsers.ParserConfigurationException;
@@ -40,17 +42,17 @@ import p4query.experts.syntaxtree.p4.P4Lexer;
 import p4query.experts.syntaxtree.p4.P4Parser;
 import p4query.ontology.Status;
 import p4query.ontology.analyses.SyntaxTree;
-import p4query.ontology.providers.P4FileProvider.CoreP4File;
 import p4query.ontology.providers.P4FileProvider.InputP4File;
-import p4query.ontology.providers.P4FileProvider.V1ModelP4File;
+import p4query.ontology.providers.P4FileProvider.P4Include;
 
 public class AntlrP4 {
 
     @Provides
     @Singleton
     @SyntaxTree
-    public Status analyse(GraphTraversalSource g, @InputP4File File inputP4, @CoreP4File File coreP4, @V1ModelP4File File v1Model) throws IOException
-    {
+    public Status analyse(GraphTraversalSource g, @InputP4File File inputP4, @P4Include List<String> includeDirs) throws IOException {
+    
+        long startTime = System.currentTimeMillis();
         System.out.println(SyntaxTree.class.getSimpleName() +" started.");
 
 // // Antlr4 P4 parser generation is now automatically managed by Maven. 
@@ -65,18 +67,12 @@ public class AntlrP4 {
         // JCPP-Antlr integration from here: https://stackoverflow.com/a/25358397
         // Note that includes are huge, they slow down everything, and many things can be analysed without them.
         Preprocessor pp = new Preprocessor(inputP4);
-        List<String> systemInclude = new ArrayList<String>();
 
-        // TODO it would be more elegant to add the parent dir of v1Model as well
-        if(!coreP4.getParent().equals(v1Model.getParent())){
-                pp.close();
-                throw new IllegalStateException("!coreP4.getParent().equals(v1Model.getParent())");
-        }
-        systemInclude.add(coreP4.getParent());   
-
-        pp.setSystemIncludePath(systemInclude);
+        pp.setSystemIncludePath(includeDirs);
         
         P4Lexer lexer = new P4Lexer(CharStreams.fromReader(new CppReader(pp)));
+
+        System.out.println("Includes found: " + pp.getIncludes());
         pp.close();
         TokenStream tokenStream = new CommonTokenStream(lexer);
 
@@ -88,7 +84,8 @@ public class AntlrP4 {
 
         TinkerGraphParseTree.fromParseTree(g, tree, lexer.getVocabulary(), parser.getRuleNames());
 
-        System.out.println(SyntaxTree.class.getSimpleName() +" complete.");
+        long stopTime = System.currentTimeMillis();
+        System.out.println(String.format("%s complete. Time used: %s ms.", SyntaxTree.class.getSimpleName() , stopTime - startTime));
 
         return new Status();
     }

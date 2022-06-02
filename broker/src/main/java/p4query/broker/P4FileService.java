@@ -17,22 +17,31 @@
 package p4query.broker;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.codejargon.feather.Provides;
 
-import p4query.ontology.providers.P4FileProvider.CoreP4File;
 import p4query.ontology.providers.P4FileProvider.InputP4File;
-import p4query.ontology.providers.P4FileProvider.V1ModelP4File;
+import p4query.ontology.providers.P4FileProvider.P4Include;
 
 class P4FileService {
     private File inputP4;
-    private File coreP4;
-    private File v1ModelP4;
+//    Map<String, File> includes; // this is not used, feel free to delete it
+    private List<String> includeDirs;
 
-    public P4FileService(String inputP4, String coreP4, String v1ModelP4)  {
+    public P4FileService(String inputP4, List<String> includeDirs) throws IOException {
         this.inputP4 = toFile(inputP4);
-        this.coreP4 = toFile(coreP4);
-        this.v1ModelP4 = toFile(v1ModelP4);
+        this.includeDirs = includeDirs;
+
+//        this.includes = 
+//            Files.find(includeDir.toPath(), 999, (p, bfa) -> bfa.isRegularFile())
+//                .collect(
+//                    Collectors.toMap(
+//                        p -> includeDir.toPath().relativize(p).toString(), 
+//                        p -> toFile(p.toString())));
     }
 
     private static File toFile(String fileName)  {
@@ -46,9 +55,8 @@ class P4FileService {
     @Provides @InputP4File
     public File inputP4(){ return inputP4; }
 
-    @Provides @CoreP4File
-    public File coreP4(){ return coreP4; }
-
-    @Provides @V1ModelP4File
-    public File v1ModelP4(){ return v1ModelP4; }
+    @Provides @P4Include
+    public List<String> includeDirs(){ 
+        return includeDirs; 
+    }
 }

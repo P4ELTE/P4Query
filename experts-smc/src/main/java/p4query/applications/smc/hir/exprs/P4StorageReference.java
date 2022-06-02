@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +13,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir.exprs;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -26,30 +30,50 @@ import java.util.NoSuchElementException;
 
 import com.beust.jcommander.Strings;
 
+import org.apache.tinkerpop.gremlin.driver.ser.binary.GraphBinaryIo;
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
+import p4query.applications.smc.hir.CompilerState;
+import p4query.applications.smc.hir.p4api.Declaration;
+import p4query.applications.smc.hir.p4api.ProcedureDeclaration;
 import p4query.applications.smc.hir.typing.Composite;
 import p4query.applications.smc.hir.typing.IRType;
 import p4query.ontology.Dom;
 
 public class P4StorageReference extends StorageReference {
     private Vertex src;
-    private GraphTraversalSource g;
-    private LinkedList<String> fieldList = new LinkedList<>();
-    private Map<String, IRType> fieldTypes = new HashMap<>();
-    private IRType.SingletonFactory typeFactory;
+    private LinkedHashMap<String, IRType> fieldTypes = new LinkedHashMap<>();
 
-    P4StorageReference(GraphTraversalSource g, Vertex src, IRType.SingletonFactory typeFactory) {
-        this.g = g;
+    private CompilerState state;
+    private Declaration parentDecl;
+    private Declaration parentControlDecl;
+
+    P4StorageReference(CompilerState state, Vertex src) throws UnableToParseException {
+        this(state, src, false);
+    }
+    
+    P4StorageReference(CompilerState state, Vertex src, boolean ignoreCheck) throws UnableToParseException {
+        GraphTraversalSource g = state.getG();
         this.src = src;
-        this.typeFactory = typeFactory;
+        this.parentDecl = state.getParentDecl();
+        this.parentControlDecl = findParentControlDecl(state);
+
+        if (!ignoreCheck && 
+            !g.V(src)
+                .or(__.has(Dom.Syn.V.CLASS, "VariableDeclarationContext"),
+                    __.outE(Dom.SYN).has(Dom.Syn.E.RULE, "nonTypeName"), 
+                    __.outE(Dom.SYN).has(Dom.Syn.E.RULE, "prefixedNonTypeName")).hasNext()){
+            throw new UnableToParseException(P4StorageReference.class, src);
+        }
+
+        this.state = state;
 
         String typeType = (String) g.V(src).values(Dom.Syn.V.CLASS).next();
 
-        if(!(typeType.equals("LvalueContext") || typeType.equals("ExpressionContext")) )
+        if(!(Arrays.asList("LvalueContext", "ExpressionContext", "VariableDeclarationContext").contains(typeType)))
             throw new IllegalArgumentException(
                 String.format("Store reference cannot be initilized on %s vertex %s.", typeType, src));
 
@@ -60,12 +84,12 @@ public class P4StorageReference extends StorageReference {
 
     @Override
     public String getFirstFieldName(){
-        return fieldList.getFirst();
+        return getFieldList().get(0);
     }
 
     @Override
     public String getTailFields(){
-        LinkedList<String> tail = new LinkedList<>(fieldList);
+        LinkedList<String> tail = new LinkedList<>(getFieldList());
         tail.removeFirst();
         return Strings.join(".", tail);
     }
@@ -73,7 +97,7 @@ public class P4StorageReference extends StorageReference {
 
     @Override
     public String toString() {
-        return "StorageReference [fieldList=" + fieldList + ", fieldTypes=" + fieldTypes + "]";
+        return "StorageReference [fieldTypes=" + fieldTypes + "]";
     }
 
     // how much we need to go from the source address to reach the address of the last field?
@@ -81,7 +105,7 @@ public class P4StorageReference extends StorageReference {
     public int getSizeOffset(){
         int currAddr = 0;
 
-        Iterator<String> it = fieldList.iterator();
+        Iterator<String> it = getFieldList().iterator();
         String curr = it.next();
         while(it.hasNext()){
             IRType type = fieldTypes.get(curr);
@@ -112,13 +136,18 @@ public class P4StorageReference extends StorageReference {
 
     // what is the size of the pointed storage field
     @Override
-    public int getSizeHint(){
-        return fieldTypes.get(fieldList.getLast()).getSize();
+    public IRType getTypeHint() {
+        List<String> fieldList = getFieldList();
+        return fieldTypes.get(fieldList.get(fieldList.size() -1));
     }
 
     private void fillFields() {
+
+        GraphTraversalSource g = state.getG();
         List<Map<String, Object>> fields = 
             g.V(src)
+             .optional(__.has(Dom.Syn.V.CLASS, "VariableDeclarationContext")
+                         .outE(Dom.SYN).has(Dom.Syn.E.RULE, "name").inV())
              .repeat(__.outE(Dom.SYN)
                        .not(__.has(Dom.Syn.E.RULE, "DOT"))
                        .order().by(Dom.Syn.E.ORD, Order.desc)
@@ -131,6 +160,7 @@ public class P4StorageReference extends StorageReference {
 
         Collections.reverse(fields);
 
+
         for (Map<String,Object> map : fields) {
             Vertex fv = (Vertex) map.get("vertex") ;
             String name = (String) map.get("name") ;
@@ -139,11 +169,15 @@ public class P4StorageReference extends StorageReference {
             try { 
                 typeVert =
                     g.V(fv).inE(Dom.SYMBOL)
-                           .has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+                           .or(__.has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES),
+                               __.has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME))  // NOTE: in case of variable instantiations we have no scope edge since this is the declaring 
                            .outV()
-                           .outE(Dom.SYMBOL)
-                           .has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE)
-                           .inV()
+                           // NOTE: optional will not run in case of table calls (first part of ipv4_lpm.apply())
+                           .optional(
+                                __
+                                .outE(Dom.SYMBOL)
+                                .has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE)
+                                .inV())
                            // NOTE: optional will run in case of structs. it will not run in case of base types.
                            .optional(
                                 __
@@ -159,19 +193,21 @@ public class P4StorageReference extends StorageReference {
                     String.format("No type information found for name %s (vertex %s)", name, fv));
             }
 
-            fieldList.add(name);
             if(typeVert != null){
-                IRType type = typeFactory.create(typeVert);
-                if(fieldTypes.containsKey(name))
+                IRType type = state.getTypeFactory().create(typeVert);
+                if(fieldTypes.containsKey(name)){
                     throw new IllegalStateException("Field name " + name + " is already stored. Dot expressions with duplicate field names are not supported yet.");
+                }
                 fieldTypes.put(name, type);
+            } else {
+                throw new IllegalStateException("Type not found for field " + name + ".");
             }
         }
     }
 
     @Override
     public String toP4Syntax() {
-        return Strings.join(".", fieldList);
+        return Strings.join(".", getFieldList());
     }
 
     @Override
@@ -181,7 +217,23 @@ public class P4StorageReference extends StorageReference {
 
     @Override
     protected List<String> getFieldList() {
-        return fieldList;
+        return new LinkedList<>(fieldTypes.keySet());
     }
+
+    @Override
+    protected LinkedHashMap<String, IRType> getFields() {
+        return fieldTypes;
+    }
+
+    @Override
+    public Declaration getParentDecl() {
+        return parentDecl;
+    }
+
+    @Override
+    public Declaration getParentControlDecl() {
+        return parentControlDecl;
+    }
+
 
 }

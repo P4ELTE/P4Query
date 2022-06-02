@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -30,8 +34,10 @@ import com.beust.jcommander.Parameter;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 
 import p4query.applications.smc.hir.Program;
+import p4query.applications.smc.hir.externs.IUseCase;
 import p4query.applications.smc.lir.StackProgram;
 import p4query.ontology.Status;
+import p4query.ontology.analyses.CallGraph;
 import p4query.ontology.analyses.CallSites;
 import p4query.ontology.analyses.ControlFlow;
 import p4query.ontology.providers.AppUI;
@@ -40,10 +46,10 @@ import p4query.ontology.providers.CLIArgs;
 import p4query.ontology.providers.P4FileProvider.InputP4File;
 
 // NOTE: This a proof-of-concept compiler for a stack machine language similar to Java bytecode. 
-//       The language implementation itself will be published later.
 //       Classes respresenting each instruction are in package p4query.applications.smc.lir.iset.
-public class SMCompiler implements Application {
 
+
+public class SMCompiler implements Application {
     private static class SMCUI extends AppUI {
         @Override
         public String getCommandName() {
@@ -58,6 +64,10 @@ public class SMCompiler implements Application {
         @Parameter(names = { "-o", "--output-dir"}, 
                     description = "<target directory where output files are generated>") 
         public String outputDir = System.getProperty("java.io.tmpdir");
+
+        @Parameter(names = { "-u", "--use-case"}, 
+                    description = "<Path to a .json describing a use case (packet distribution, table contents)>") 
+        public String pathToUseCase = null;
     }
 
 
@@ -80,7 +90,7 @@ public class SMCompiler implements Application {
     private Status sites; // used for argument and parameter discovery
 
 //    @Inject
-//    @CallGraph Status notUsed; // used for argument and parameter discovery
+//    @CallGraph Status notUsed; 
 
     @Inject
     @InputP4File 
@@ -90,19 +100,53 @@ public class SMCompiler implements Application {
     @CLIArgs 
     private AppUI args; 
     // NOTE: coding guideline: queries that may fail should be surrounded with try-catch, and rethrow an explanation 
+    
 
     @Override
     public Status run() throws Exception{
+        // long startTimeApp = System.currentTimeMillis();
 
-//        long startTimeApp = System.currentTimeMillis();
+        String fileName = inputP4.getName();
 
-        Program p = new Program(g);
+        IUseCase useCase;
+        if(ui.pathToUseCase == null){
+            useCase = new BasicRouterBmv2UseCase();
+        } else {
+//            useCase = new BasicRouterBmv2UseCase(ui.nondet);
+            useCase = UseCaseFromJSON.Factory.create(ui.pathToUseCase);
+        }
+
+        boolean nondet = false;
+        String origOutputPath = Paths.get(ui.outputDir, fileName).toString();
+        String asmOutputPath = Paths.get(ui.outputDir, fileName + ".asm.c").toString();
+        String prismOutputPath = Paths.get(ui.outputDir,  fileName + ".prism").toString();
+
+        compile(useCase, nondet, origOutputPath, asmOutputPath, prismOutputPath);
+
+        nondet = true;
+        origOutputPath = Paths.get(ui.outputDir, fileName).toString();
+        asmOutputPath = Paths.get(ui.outputDir, fileName + "-nondet.asm.c").toString();
+        prismOutputPath = Paths.get(ui.outputDir,  fileName + "-nondet.prism").toString();
+
+        compile(useCase, nondet, origOutputPath, asmOutputPath, prismOutputPath);
+
+//        long stopTimeApp = System.currentTimeMillis();
+//        System.out.println(String.format("Application complete. Time used: %s ms.", stopTimeApp - startTimeApp));
+        return new Status();
+    }
+
+
+    private void compile(IUseCase useCase,
+                         boolean nondet,
+                         String origOutputPath,
+                         String asmOutputPath,
+                         String prismOutputPath) throws IOException, FileNotFoundException {
+
+        Program p = new Program(g, useCase, nondet);
         StackProgram sp = p.compileToLIR();
 
-        String origOutputPath = Paths.get(ui.outputDir, "basic.p4").toString();
-        String asmOutputPath = Paths.get(ui.outputDir, "basic.p4.asm.c").toString();
-
         Files.copy(Paths.get(inputP4.getAbsolutePath()), Paths.get(origOutputPath), StandardCopyOption.REPLACE_EXISTING);
+
         System.out.println("Input P4 file copied to " + origOutputPath);
 
         PrintStream os = new PrintStream(new FileOutputStream(asmOutputPath, false));
@@ -110,9 +154,11 @@ public class SMCompiler implements Application {
         os.close();
         System.out.println("Human-readable ASM written to " + asmOutputPath);
 
-//        long stopTimeApp = System.currentTimeMillis();
-//        System.out.println(String.format("Application complete. Time used: %s ms.", stopTimeApp - startTimeApp));
-        return new Status();
+        PrintStream os2 = new PrintStream(new FileOutputStream(prismOutputPath, false));
+        sp.toPrism(os2);
+        os2.close();
+        System.out.println("PRISM written to " + prismOutputPath);
     }
+
 
 }

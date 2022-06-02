@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir.iset;
 
@@ -22,11 +24,13 @@ import java.util.List;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
+import p4query.applications.smc.hir.CompilerState;
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.LocalMemoryLayout;
-import p4query.applications.smc.hir.ProcedureDefinition;
 import p4query.applications.smc.hir.exprs.CustomStorageReference;
 import p4query.applications.smc.hir.exprs.Expression;
+import p4query.applications.smc.hir.p4api.Declaration;
+import p4query.applications.smc.hir.p4api.ProcedureDefinition;
 import p4query.applications.smc.hir.typing.IRType;
 import p4query.applications.smc.lir.iset.Comment;
 import p4query.applications.smc.lir.iset.IfEq;
@@ -39,17 +43,20 @@ public class ConditionalHead implements Instruction {
     private CustomStorageReference boolStore;
     private Expression head;
     private Vertex src;
+    private Declaration parent ;
 
-    public ConditionalHead(GraphTraversalSource g, Vertex v, String vClass,
-			IRType.SingletonFactory typeFactory, ProcedureDefinition procDef) {
-
+    public ConditionalHead(CompilerState state, Vertex v, String vClass) {
+        GraphTraversalSource g = state.getG();
         this.src = v;
 
         Vertex cond = g.V(v).outE(Dom.SYN)
                             .has(Dom.Syn.E.RULE, "expression").inV()
                             .next();
 
-        this.head = Expression.Factory.create(g, cond, typeFactory, procDef, 1);
+        IRType condType = state.getTypeFactory().create("BOOL", 1, null);
+        this.head = Expression.Factory.create(state, cond, condType);
+
+        this.parent = state.getParentDecl();
 
 //      no need for extra store, functions should just push the boolean on the stack
 //        IRType type = typeFactory.create("BOOLEAN", 1, head);
@@ -64,7 +71,7 @@ public class ConditionalHead implements Instruction {
         insts.add(new Comment("if(" + head.toP4Syntax() + ")"));
         insts.addAll(head.compileToLIR(local, global));
 //         insts.addAll(boolStore.compileToLIR(local, global));
-        insts.add(new IfEq(new UnresolvedVertexLabel(src, "jump if not " + head.toP4Syntax())));
+        insts.add(new IfEq(new UnresolvedVertexLabel(src, "jump if not " + head.toP4Syntax(), parent)));
 
         return insts;
     }

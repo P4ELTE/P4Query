@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,34 +13,38 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir.typing;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import p4query.applications.smc.hir.Definition;
+import p4query.applications.smc.hir.p4api.Declaration;
 
+// TODO this is not a Struct. rename this to LocalComposite
 public class LocalStruct implements Composite {
 
     private LinkedHashMap<String, IRType> fields = new LinkedHashMap<>(); // stored in input order
-    private Definition parentDef;
+    private Declaration parentDecl;
 
     private int tempCounter = 0;
 
-    public LocalStruct(Definition def) {
-        this.parentDef = def;
+    public LocalStruct(Declaration def) {
+        this.parentDecl = def;
     }
 
-    private LocalStruct(Definition def, LinkedHashMap<String, IRType> fields, int tempCounter) {
-        this.parentDef = def;
+    private LocalStruct(Declaration def, LinkedHashMap<String, IRType> fields, int tempCounter) {
+        this.parentDecl = def;
         this.fields = fields;
         this.tempCounter = tempCounter;
     }
     
     public void appendField(String name, IRType type){
         if(fields.containsKey(name)){
-            throw new IllegalArgumentException("field name already exists " + name);
+            throw new IllegalArgumentException(
+                String.format("Field name %s already exists for %s.", name, parentDecl));
         }
         fields.put(name, type);
     }
@@ -48,13 +52,19 @@ public class LocalStruct implements Composite {
     public String commaSeparatedFieldList(){
         StringBuffer sb = new StringBuffer();
         String delim = "";
+
+        int paramNum = fields.size() - tempCounter;
         for (Map.Entry<String, IRType> e : fields.entrySet()) {
+           if(paramNum == 0) break;
+
            sb.append(delim);
            sb.append(e.getValue().getName()); 
            sb.append(" ");
            sb.append(e.getKey());
             
-            delim = ", ";
+           delim = ", ";
+
+           paramNum -= 1;
         }
         return sb.toString();
     }
@@ -65,16 +75,16 @@ public class LocalStruct implements Composite {
 //        this.fields = newMap;
 //    }
 
-    public String addTemporary(IRType type){
-        String name = "TEMP_" + tempCounter;
-        tempCounter += 1;
+    public String addTemporary(IRType type, String name){
+        name = "temp" + tempCounter + "_" + name;
         fields.put(name, type);
-        return name;
+        tempCounter += 1;
+        return parentDecl.getName() + "." + name;
     }
 
     @Override
     public String getName() {
-        return parentDef.getName();
+        return parentDecl.getName();
     }
 
     @Override
@@ -97,28 +107,30 @@ public class LocalStruct implements Composite {
     }
 
     // TODO these two would be simpler, if parent params, owned params, and temps were stored separately
-    public LocalStruct restrictToOwnedFields() {
+    public LocalStruct restrictToOwnedVars() {
         LinkedHashMap<String, IRType> owned = new LinkedHashMap<>();
         for (Map.Entry<String, IRType> f : fields.entrySet()) {
             if(f.getValue() instanceof Struct){
                 continue;
             }
+
             owned.put(f.getKey(), f.getValue());
         }
-        return new LocalStruct(parentDef, owned, tempCounter);
+        return new LocalStruct(parentDecl, owned, tempCounter);
     }
 
     public LocalStruct restrictToOwnedParameters() {
-        LocalStruct owned = restrictToOwnedFields();
+        LocalStruct owned = restrictToOwnedVars();
         LinkedHashMap<String, IRType> params = new LinkedHashMap<>();
         int paramNum = owned.getFields().size() - tempCounter;
         for (Map.Entry<String, IRType> entry :  owned.getFields().entrySet()) {
             if(paramNum == 0)
                 break;
+
             params.put(entry.getKey(), entry.getValue());
             paramNum -= 1;
         }
-        return new LocalStruct(parentDef, params, tempCounter);
+        return new LocalStruct(parentDecl, params, tempCounter);
     }
 
     @Override
@@ -126,5 +138,4 @@ public class LocalStruct implements Composite {
         return "LocalStruct [fields=" + fields + "]";
     }
 
-    
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir.typing;
 
@@ -41,9 +43,10 @@ public class BaseType implements IRType {
              .inV()
              .values("value")
              .toList();
-        this.name = subterms.stream().map(o -> (String) o).collect(Collectors.joining(""));
 
-        // TODO use gremlin choose
+        String name0 = subterms.stream().map(o -> (String) o).collect(Collectors.joining(""));
+        this.name = name0.replace("\\>", "").replace("\\<", "_");
+
         if(g.V(v).outE(Dom.SYN).has(Dom.Syn.E.RULE, "BIT").hasNext()){
             String sizeStr = (String)
                   g.V(v).outE(Dom.SYN)
@@ -53,6 +56,8 @@ public class BaseType implements IRType {
                         .next();
             this.size = Integer.parseInt(sizeStr);
         } else if(g.V(v).outE(Dom.SYN).has(Dom.Syn.E.RULE, "ERROR").hasNext()){
+            this.size = 1;
+        } else if(this.name.equals("bool")){
             this.size = 1;
         } else {
             throw new IllegalArgumentException(

@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +13,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.lir.iset;
 
+import java.io.PrintStream;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -50,6 +53,7 @@ public class ProbabilisticInstruction implements StackInstruction {
             for (Fraction p : pinst.probabilities.values()) {
                 sumProb = sumProb.add(p);
             }
+            sumProb = sumProb.reduce();
             if(!sumProb.equals(Fraction.ONE)){
                 throw 
                     new IllegalArgumentException(
@@ -77,6 +81,18 @@ public class ProbabilisticInstruction implements StackInstruction {
         }
         sb.append(" }");
         return sb.toString();
+    }
+
+    @Override
+    public void toPrism(PrintStream os) {
+        String delim = " ";
+        for (Map.Entry<StackInstruction, Fraction> entry  : probabilities.entrySet()) {
+
+            os.println(delim);
+            os.println(" " + entry.getValue() + " : ");
+            entry.getKey().toPrism(os);
+            delim = " + ";
+        }
     }
 
     public List<StackInstruction> getInstructions(){

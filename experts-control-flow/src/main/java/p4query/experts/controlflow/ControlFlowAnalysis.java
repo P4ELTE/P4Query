@@ -18,8 +18,10 @@ package p4query.experts.controlflow;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import javax.inject.Singleton;
 
@@ -27,6 +29,7 @@ import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
+import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.util.function.Lambda;
 
@@ -53,6 +56,7 @@ public class ControlFlowAnalysis {
                             @SyntaxTree Status st, 
                             @AbstractSyntaxTree Status ast, 
                             @SymbolTable Status sym) {
+            long startTime = System.currentTimeMillis();
 
         // // query printing
         //        File f = File. createTempFile("query", ".tex");
@@ -65,7 +69,8 @@ public class ControlFlowAnalysis {
             System.out.println(ControlFlow.class.getSimpleName() + " started.");
 
             addFlowToFirstStatement(g);
-            addFlowToConditionalBranches(g);
+            addFlowToTwoWayConditionals(g);
+            addFalseFlowToOneWayConditionals(g);
             addFlowBetweenSiblings(g);
             addFlowBetweenParserStates(g);
             addParserEntry(g);
@@ -74,7 +79,8 @@ public class ControlFlowAnalysis {
 
             quickfixSelectInCFG(g);
 
-            System.out.println(ControlFlow.class.getSimpleName() +" complete.");
+            long stopTime = System.currentTimeMillis();
+            System.out.println(String.format("%s complete. Time used: %s ms.", ControlFlow.class.getSimpleName() , stopTime - startTime));
             return new Status();
         }
 
@@ -98,21 +104,133 @@ public class ControlFlowAnalysis {
         }
 
             // send flow from each conditional to both of its branches 
-        private static void addFlowToConditionalBranches(GraphTraversalSource g) {
-            g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "ConditionalStatementContext").as("b")
-             .outE(Dom.SEM).or(
-                __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.TRUE_BRANCH),
-                __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.FALSE_BRANCH))
-             .as("e")
-             .inV()
-             .addE(Dom.CFG).from("b")
-//             .property(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FLOW)
-             .property(Dom.Cfg.E.ROLE, 
-                       __.select("e")
-                         .choose(__.values(Dom.Sem.ROLE))
-                         .option(Dom.Sem.Role.Control.TRUE_BRANCH, __.constant(Dom.Cfg.E.Role.TRUE_FLOW))
-                         .option(Dom.Sem.Role.Control.FALSE_BRANCH, __.constant(Dom.Cfg.E.Role.FALSE_FLOW)))
-             .iterate();
+        private static void addFlowToTwoWayConditionals(GraphTraversalSource g) {
+            List<Map<String, Object>> branches = 
+                g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "ConditionalStatementContext").as("c")
+                .outE(Dom.SEM).or(
+                    __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.TRUE_BRANCH),
+                    __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.FALSE_BRANCH))
+                .as("e")
+                .select("c", "e")
+                .toList();
+
+            for (Map<String, Object> m : branches){
+                Vertex c = (Vertex) m.get("c");
+                Edge e = (Edge) m.get("e");
+                String role = (String) g.E(e).values(Dom.Sem.ROLE).next();
+
+                String label;
+                if(role.equals(Dom.Sem.Role.Control.TRUE_BRANCH)){
+                    label = Dom.Cfg.E.Role.TRUE_FLOW;
+               } else if(role.equals(Dom.Sem.Role.Control.FALSE_BRANCH)){
+                    label = Dom.Cfg.E.Role.FALSE_FLOW;
+               } else {
+                   throw new IllegalStateException("Unexpected role " + role);
+               }
+               g.E(e).inV()
+                .addE(Dom.CFG).from(c)
+                .property(Dom.Cfg.E.ROLE, label)
+                .iterate();
+            }
+        }
+
+        // note: conditionals always have a true branch
+        // descr: The false flow should point to the next sibling of the first ancestor that is
+        // - not the child of a conditional node, and
+        // - not the last child of a block node.
+        // If no such ancestors exists (i.e. if the conditional itself is a return point in the function), then no false flow is created, but a return edge is pointed to the conditional (see addEntryExit())
+        private static void addFalseFlowToOneWayConditionals(GraphTraversalSource g) {
+            LinkedHashMap<Vertex, Vertex> condsAncestors = findOneWayCondsAncestsors(g);
+
+            for (Map.Entry<Vertex, Vertex> entry : condsAncestors.entrySet()) {
+                Vertex c = entry.getKey();
+                Vertex ancestor = entry.getValue();
+
+                if(ancestor == null){
+                    continue;
+                } 
+                Long ownEdgeId; 
+                try {
+                    ownEdgeId = (Long)
+                        g.V(ancestor)
+                            .inE(Dom.SEM)
+                            .has(Dom.Sem.ROLE, Dom.Sem.Role.Control.NEST) // note NEST is enough, blockstatementcontext is never linked by STATEMENT edges
+                            .values(Dom.Sem.ORD)
+                            .next();
+                } catch(NoSuchElementException e){
+                    System.err.println(g.V(ancestor).elementMap().next());
+                    throw e;
+                }
+
+                List<Map<String, Object>> sibs = 
+                    g.V(ancestor)
+                        .inE(Dom.SEM)
+                        .has(Dom.Sem.ROLE, Dom.Sem.Role.Control.NEST) 
+                        .outV()
+                        .outE(Dom.SEM)
+                        .or(__.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.NEST),
+                            __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.STATEMENT))
+                        .order().by(Dom.Sem.ORD, Order.asc)
+                        .project("edgeOrd", "sibling")
+                        .by(__.values(Dom.Sem.ORD))
+                        .by(__.inV())
+                        .toList();
+
+                // assumes sibs is sorted by edge ord
+                Vertex nextSib = null;
+                for (Map<String, Object> obj : sibs) {
+                    Long sibId = (Long) obj.get("edgeOrd");
+                    Vertex sib = (Vertex) obj.get("sibling");
+                    if(sibId > ownEdgeId){
+                        nextSib = sib;
+                        break;
+                    }
+                }
+                if(nextSib == null){
+                    throw new IllegalStateException("Next sibling not found.");
+                }
+
+                g.V(c).addE(Dom.CFG).to(nextSib)
+                      .property(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FALSE_FLOW)
+                      .iterate();
+
+            }
+        }
+
+        private static LinkedHashMap<Vertex,Vertex> findOneWayCondsAncestsors(GraphTraversalSource g){
+
+            LinkedHashMap<Vertex,Vertex> condsAncenstors = new LinkedHashMap<>();
+
+            List<Vertex> oneWayConds = 
+                g.V().hasLabel(Dom.SYN).has(Dom.Syn.V.CLASS, "ConditionalStatementContext")
+                 .not(__.outE(Dom.SEM)
+                        .has(Dom.Sem.ROLE, Dom.Sem.Role.Control.FALSE_BRANCH))
+                 .toList();
+
+            for (Vertex c : oneWayConds) {
+                List<Vertex> maybeAncestor = 
+                    g.V(c)
+                    .until(__.not(__.inE(Dom.SEM)
+                                    .or(
+                                    __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.BODY),
+                                    __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.LAST),
+                                    __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.TRUE_BRANCH),
+                                    __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.FALSE_BRANCH))))
+                    .repeat(__.inE(Dom.SEM)
+                            .or(__.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.STATEMENT),
+                                __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.NEST),
+                                __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.TRUE_BRANCH),
+                                __.has(Dom.Sem.ROLE, Dom.Sem.Role.Control.FALSE_BRANCH))
+                            .outV())
+                    .toList();
+
+                if(maybeAncestor.isEmpty()){
+                    condsAncenstors.put(c, null);
+                } else {
+                    condsAncenstors.put(c, maybeAncestor.get(0));
+                } 
+            }
+            return condsAncenstors;
         }
 
         // for each child c, send flow from c's return point to c's sibling
@@ -284,6 +402,22 @@ public class ControlFlowAnalysis {
                 .addE(Dom.CFG).from("cdc")
                 .property(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.RETURN)
                 .iterate();
+
+
+            LinkedHashMap<Vertex,Vertex> condsAncenstors = findOneWayCondsAncestsors(g);
+
+            for (Map.Entry<Vertex, Vertex> entry : condsAncenstors.entrySet()) {
+                if(entry.getValue() != null)
+                    continue;
+                
+                g.V(entry.getKey()).as("c")
+                 .repeat(__.in(Dom.SYN))
+                 .until(__.or(__.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"),
+                            __.has(Dom.Syn.V.CLASS, "ActionDeclarationContext")))
+                 .addE(Dom.CFG).to("c")
+                 .property(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.RETURN)
+                 .iterate();
+            }
         }
 
 

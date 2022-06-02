@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir.iset;
 
@@ -23,19 +25,21 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import p4query.applications.smc.hir.typing.IRType;
 import p4query.applications.smc.lir.iset.StackInstruction;
+import p4query.applications.smc.hir.CompilerState;
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.LocalMemoryLayout;
-import p4query.applications.smc.hir.ProcedureDefinition;
 import p4query.applications.smc.hir.exprs.Expression;
+import p4query.applications.smc.hir.p4api.ProcedureDefinition;
 
 public class ProcedureCall implements Instruction {
 
    private Expression expression;
    private Vertex src;
 
-   ProcedureCall(GraphTraversalSource g, Vertex src, String vClass, IRType.SingletonFactory typeFactory, ProcedureDefinition parDef) {
+   ProcedureCall(CompilerState state, Vertex src, String vClass) {
       this.src = src;
-      this.expression = Expression.Factory.create(g, src, typeFactory, parDef, -1);
+      // NOTE size of the return value does not matter here, since it is not used anyway. this does not affect the definition.
+      this.expression = Expression.Factory.create(state, src, null);
    }
 
    @Override

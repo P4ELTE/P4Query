@@ -16,18 +16,22 @@
  */
 package p4query.broker;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -36,6 +40,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -79,13 +85,13 @@ public class App {
     // NOTE: field order matters
     // NOTE: loading files from classpath seems to be platform-dependent, so we load them as streams and write them to temp files
     private final ClassLoader loader =  Thread.currentThread().getContextClassLoader();
-    private final String actualCoreP4 = contentsToTempFile(loader.getResourceAsStream(CORE_P4_PATH), "core.p4");
-    private final String actualV1ModelP4 = contentsToTempFile(loader.getResourceAsStream(V1MODEL_P4_PATH), "v1model.p4");
     private final String actualBasicP4 = contentsToTempFile(loader.getResourceAsStream(BASIC_P4_PATH), "basic.p4");
     private P4FileService pfs;
 
     public static void main(String[] args) throws Exception {
 
+        // TODO use finally (and after that, check that database persistence still works consistently between runs and crashes)
+	long startTimeApp = System.currentTimeMillis();
         try {
             App broker = new App(args);
             broker.run();
@@ -94,12 +100,19 @@ public class App {
             System.out.println(e.getMessage());
         } // otherwise: crash
 
+
+        long stopTimeApp = System.currentTimeMillis();
+        System.out.println(String.format("Total time used: %s ms.", stopTimeApp - startTimeApp));
         System.exit(0);
     }
 
 
     public App(String[] args) throws DiscoveryException, IOException, LocalGremlinServerException,
             ClassNotFoundException, ReflectionException, IllegalUserInputException {
+
+        File includeDir = new File(System.getProperty("java.io.tmpdir") + "/" + "p4query" + "/" + "include");
+        includeDir.getParentFile().mkdirs();
+        includeDir.mkdir();
 
         analysers = App.discoverAnalysers();
         System.out.println("Analysers discovered: " + analysers);
@@ -110,8 +123,15 @@ public class App {
         cli = new CLIArgsProvider(args, apps, actualBasicP4);
         System.out.println("Command:" + cli.getInvokedAppUI().getCommandName() + " " + cli.getInvokedAppUI());
 
+        storeClasspathIncludes(includeDir);
+
+        List<String> includes = new LinkedList<>();
+        includes.add(includeDir.getAbsolutePath());
+        if(cli.getInvokedAppUI().includes != null)
+            includes.addAll(cli.getInvokedAppUI().includes);
+
         String p4FilePath = cli.getInvokedAppUI().getActualP4FilePath();
-        pfs = new P4FileService(p4FilePath, actualCoreP4, actualV1ModelP4);
+        pfs = new P4FileService(p4FilePath, includes);
 
         server = initGremlinServer(cli);
 
@@ -143,6 +163,28 @@ public class App {
 
     public GraphTraversalSource getGraphTraversalSource() throws Exception {
       return server.provideConnection();
+    }
+
+    public static void storeClasspathIncludes(File includeDir) throws IOException {
+        String path = "include";
+        final ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        List<String> contents = null;
+        try (
+                final InputStream is = loader.getResourceAsStream(path);
+                final InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
+                final BufferedReader br = new BufferedReader(isr)) {
+            contents = br.lines().collect(Collectors.toList());
+        }
+
+        for (String fname : contents) {
+            try {
+                File f = new File(includeDir.getAbsolutePath() + "/" + fname);
+                f.createNewFile();
+                Files.copy(loader.getResourceAsStream(path + "/" + fname), f.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            } catch(IOException e){
+                throw new IllegalStateException("Cannot open P4 files in built-in include directory", e);
+            }
+        }
     }
 
     private static String contentsToTempFile(InputStream is, String fileName) throws IOException {

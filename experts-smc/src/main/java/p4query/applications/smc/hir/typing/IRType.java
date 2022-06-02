@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir.typing;
 
@@ -40,6 +42,12 @@ public interface IRType {
         private GraphTraversalSource g;
         public SingletonFactory(GraphTraversalSource g) {
             this.g = g;
+        }
+        public SingletonFactory(SingletonFactory f) {
+            this.typeNames = f.typeNames;
+            this.typeObjs = f.typeObjs;
+            this.customTypes = f.customTypes;
+            this.g = f.g;
         }
 
         public GenType create(String name, int size, Expression origin){
@@ -70,12 +78,16 @@ public interface IRType {
                 case "BaseTypeContext": 
                     return handleBaseType(v, typeType);
                 case "ExternDeclarationContext": 
+                case "TableDeclarationContext": 
                     return handleExternDataType(v, typeType);
+                case "EnumDeclarationContext": 
+                    return handleEnumDeclarationContext(v, typeType);
                 default: 
                     throw new IllegalArgumentException(
-                        String.format("Type initialized with vertex %s of unknown class %s.", v, typeType));
+                        String.format("Type initialized with vertex %s of unknown class %s.", g.V(v).elementMap().next(), typeType));
             }
         }
+
 
         private IRType handleStructAndHeader(Vertex v, String typeType) {
             String typeName = (String)
@@ -133,6 +145,26 @@ public interface IRType {
             registerTypeObjToVertex(v, typeObj);
             return typeObj;
 
+        }
+
+        // note: this is the same as handleStructAndHeader except for the initialization
+        private IRType handleEnumDeclarationContext(Vertex v, String typeType) {
+            String typeName = (String)
+                g.V(v).outE(Dom.SYMBOL)
+                    .has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME)
+                    .inV()
+                    .values("value")
+                    .next();
+
+            if(typeObjs.containsKey(typeName)){
+                IRType typeObj2 = typeObjs.get(typeName);
+                typeNames.put(v, typeName);
+                return typeObj2;
+            }
+
+            IRType typeObj = new EnumType(g, v, typeType, this);
+            registerTypeObjToVertex(v, typeObj);
+            return typeObj;
         }
 
         private IRType handleBaseType(Vertex v, String typeType){

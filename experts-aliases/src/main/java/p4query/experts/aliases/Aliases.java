@@ -50,13 +50,15 @@ public class Aliases {
     @Singleton
     @AbstractSyntaxTree
     public Status analyse(GraphTraversalSource g, @SyntaxTree Status s){
+        long startTime = System.currentTimeMillis();
         System.out.println(AbstractSyntaxTree.class.getSimpleName() +" started.");
 
         Parser.analyse(g);
         Control.analyse(g);
         Instantiation.analyse(g);
 
-        System.out.println(AbstractSyntaxTree.class.getSimpleName() +" complete.");
+        long stopTime = System.currentTimeMillis();
+        System.out.println(String.format("%s complete. Time used: %s ms.", AbstractSyntaxTree.class.getSimpleName() , stopTime - startTime));
         return new Status();
     }
 
@@ -342,6 +344,8 @@ public class Aliases {
                         .has(Dom.Syn.V.CLASS, "DirectApplicationContext").or()
                         .has(Dom.Syn.V.CLASS, "ConditionalStatementContext").or()
                         .has(Dom.Syn.V.CLASS, "BlockStatementContext").or()
+                        .has(Dom.Syn.V.CLASS, "VariableDeclarationContext").or()
+                        .has(Dom.Syn.V.CLASS, "ConstantDeclarationContext").or()
                         .has(Dom.Syn.V.CLASS, "ParserBlockStatementContext").or()
                         .has(Dom.Syn.V.CLASS, "EmptyStatement").or()
                         .has(Dom.Syn.V.CLASS, "ExitStatement").or()
@@ -376,29 +380,35 @@ public class Aliases {
         }
 
 
-        @SuppressWarnings("unchecked")
         private static void findConditionalBranches(GraphTraversalSource g) {
+            List<Vertex> conds = 
+                g.V().has(Dom.Syn.V.CLASS, "ConditionalStatementContext")
+                     .toList();
+            for (Vertex cond : conds) {
+                List<Vertex> branches = 
+                    g.V(cond).outE(Dom.SYN).has(Dom.Syn.E.RULE, "statement")
+                    .order().by(Dom.Syn.E.ORD, Order.asc)
+                    .inV().out(Dom.SYN)
+                    .toList();
 
-            g.E().hasLabel(Dom.SEM)
-             .has(Dom.Sem.DOMAIN, Dom.Sem.Domain.TOP).has(Dom.Sem.ROLE, Dom.Sem.Role.Top.CONTROL).inV()
-             .repeat(__.out(Dom.SYN))
-             .emit(__.has(Dom.Syn.V.CLASS, "ConditionalStatementContext"))
-             .as("cond")
-             .outE(Dom.SYN).has(Dom.Syn.E.RULE, "statement")
-             .order().by(Dom.Syn.E.ORD)
-             .inV().out(Dom.SYN)
-             .<Vertex>union(
-                 __.<Vertex>limit(1)
-                    .addE(Dom.SEM).from("cond")
-                    .property(Dom.Sem.DOMAIN, Dom.Sem.Domain.CONTROL)
-                    .property(Dom.Sem.ROLE, Dom.Sem.Role.Control.TRUE_BRANCH)
-                    .inV(),
-                __.<Vertex>skip(1)
-                    .addE(Dom.SEM).from("cond")
-                    .property(Dom.Sem.DOMAIN, Dom.Sem.Domain.CONTROL)
-                    .property(Dom.Sem.ROLE, Dom.Sem.Role.Control.FALSE_BRANCH)
-                    .inV())
-             .iterate();
+                if(branches.isEmpty()){
+                    throw new IllegalStateException(
+                        "Conditional has no branches: " 
+                        + g.V(cond).elementMap().next());
+                }
+
+                g.V(cond).addE(Dom.SEM).to(branches.get(0))
+                        .property(Dom.Sem.DOMAIN, Dom.Sem.Domain.CONTROL)
+                        .property(Dom.Sem.ROLE, Dom.Sem.Role.Control.TRUE_BRANCH)
+                        .iterate();
+
+                if(branches.size() > 1){
+                    g.V(cond).addE(Dom.SEM).to(branches.get(1))
+                            .property(Dom.Sem.DOMAIN, Dom.Sem.Domain.CONTROL)
+                            .property(Dom.Sem.ROLE, Dom.Sem.Role.Control.FALSE_BRANCH)
+                            .iterate();
+                }
+            }
         }
 
         // Sends a 'last' edge from each 'block statement' node to its last nested node.

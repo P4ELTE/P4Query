@@ -1,0 +1,91 @@
+
+// smc program data
+
+const int eip__port_mapping = 21 ; 
+const int eip__bd = 26 ; 
+const int eip__ipv4_fib = 31 ; 
+const int eip__ipv4_fib_lpm = 40 ;
+const int eip__nexthop = 45 ; 
+
+// benchmark data
+
+const int kilobyte = 1024 * 8;
+
+const double best__overhead = 0.114 ;
+const double avg__overhead = 0.309394 ;
+const double worst__overhead = 0.438 ;
+
+const int size__t1 = 586 ;
+const int keysize__t1 = 48;
+
+const double best__t1  = 2.031 ;  
+const double avg__t1  = 4.810818 ;  
+const double worst__t1  = 6.13 ;  
+
+const double num_of_caches__t1 = size__t1 ;   
+
+const double best__t1entry = best__t1/num_of_caches__t1;    
+const double avg__t1entry = avg__t1/num_of_caches__t1; 
+const double worst__t1entry = worst__t1/num_of_caches__t1;  
+
+// p4 program data
+
+const int size__port_mapping = 11;
+const int keysize__port_mapping = 9;
+const double num_of_caches__port_mapping = size__port_mapping  ; 
+
+const int size__bd = 39;
+const int keysize__bd = 16;
+const double num_of_caches__bd = size__bd ; 
+
+const int size__ipv4_fib = 0 ;
+const int keysize__ipv4_fib = 34;
+const double num_of_caches__ipv4_fib = size__ipv4_fib; 
+
+const int size__ipv4_fib_lpm = 269 ;
+const int keysize__ipv4_fib_lpm = 44;
+const double num_of_caches__ipv4_fib_lpm = size__ipv4_fib_lpm ; 
+
+const int size__nexthop = 39;
+const int keysize__nexthop = 16;
+const double num_of_caches__nexthop = size__nexthop ; 
+
+
+// rewards
+
+rewards "best_case"
+
+  op = NO_OP & eip = 0 : best__overhead; 
+
+  op = OP_INVOKE & eip = eip__port_mapping : (best__t1entry * num_of_caches__port_mapping);  
+  op = OP_INVOKE & eip = eip__bd : (best__t1entry * num_of_caches__bd);  
+  op = OP_INVOKE & eip = eip__ipv4_fib : (best__t1entry * num_of_caches__ipv4_fib);  
+  op = OP_INVOKE & eip = eip__ipv4_fib_lpm : (best__t1entry * num_of_caches__ipv4_fib_lpm);  
+  op = OP_INVOKE & eip = eip__nexthop : (best__t1entry * num_of_caches__nexthop);  
+
+endrewards
+
+
+rewards "worst_case"
+
+  op = NO_OP & eip = 0 : worst__overhead; 
+
+  op = OP_INVOKE & eip = eip__port_mapping : (worst__t1entry * num_of_caches__port_mapping);  
+  op = OP_INVOKE & eip = eip__bd : (worst__t1entry * num_of_caches__bd);  
+  op = OP_INVOKE & eip = eip__ipv4_fib : (worst__t1entry * num_of_caches__ipv4_fib);  
+  op = OP_INVOKE & eip = eip__ipv4_fib_lpm : (worst__t1entry * num_of_caches__ipv4_fib_lpm);  
+  op = OP_INVOKE & eip = eip__nexthop : (worst__t1entry * num_of_caches__nexthop);  
+
+endrewards
+
+rewards "avg_case"
+
+  op = NO_OP & eip = 0 : avg__overhead; 
+
+  op = OP_INVOKE & eip = eip__port_mapping : (avg__t1entry * num_of_caches__port_mapping);  
+  op = OP_INVOKE & eip = eip__bd : (avg__t1entry * num_of_caches__bd);  
+  op = OP_INVOKE & eip = eip__ipv4_fib : (avg__t1entry * num_of_caches__ipv4_fib);  
+  op = OP_INVOKE & eip = eip__ipv4_fib_lpm : (avg__t1entry * num_of_caches__ipv4_fib_lpm);  
+  op = OP_INVOKE & eip = eip__nexthop : (avg__t1entry * num_of_caches__nexthop);  
+
+endrewards

@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir.iset;
 
@@ -23,53 +25,49 @@ import java.util.NoSuchElementException;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
-import p4query.applications.smc.hir.Definition;
+import p4query.applications.smc.hir.CompilerState;
 import p4query.applications.smc.hir.GlobalMemoryLayout;
 import p4query.applications.smc.hir.LocalMemoryLayout;
-import p4query.applications.smc.hir.ProcedureDefinition;
 import p4query.applications.smc.hir.exprs.Expression;
-import p4query.applications.smc.hir.typing.IRType;
+import p4query.applications.smc.hir.p4api.Definition;
+import p4query.applications.smc.hir.p4api.ProcedureDefinition;
+import p4query.applications.smc.hir.typing.GenType;
 import p4query.applications.smc.lir.iset.Comment;
 import p4query.applications.smc.lir.iset.StackInstruction;
 import p4query.ontology.Dom;
 
 
 public class SelectHead implements Instruction {
-    private ProcedureDefinition procDef;
-    private IRType.SingletonFactory typeFactory;
     private Vertex src;
-    private GraphTraversalSource g;
     private Expression expr;
 
-    SelectHead(GraphTraversalSource g, Vertex selectExpr, String vClass, IRType.SingletonFactory typeFactory,
-            ProcedureDefinition procDef) {
-        this.g = g;
+    SelectHead(CompilerState state, Vertex selectExpr, String vClass) {
         this.src = selectExpr;
-        this.typeFactory = typeFactory;
-        this.procDef = procDef;
 
-        this.expr = findSelectHeadExpression(g, selectExpr, typeFactory, procDef);
+        this.expr = findSelectHeadExpression(state, selectExpr);
     }
 
-    public static Expression findSelectHeadExpression(GraphTraversalSource g, Vertex selectExpr, IRType.SingletonFactory typeFactory, Definition procDef2){
+    public static Expression findSelectHeadExpression(CompilerState state, Vertex selectExpr){
 
-        Vertex head;
+        GraphTraversalSource g = state.getG();
         try { 
-            head = 
-                g.V(selectExpr)
-                    .outE(Dom.SYN)
-                    .has(Dom.Syn.E.RULE, "expressionList").inV()
-                    .outE(Dom.SYN)
-                    .has(Dom.Syn.E.RULE, "expression")
-                    .inV()
-                    .next();
+            g.V(selectExpr)
+                .has(Dom.Syn.V.CLASS, "SelectExpressionContext")
+                .outE(Dom.SYN)
+                .has(Dom.Syn.E.RULE, "expressionList").inV()
+                .next();
+            
         } catch(NoSuchElementException e){
             throw new IllegalArgumentException(
-                String.format("Cannot find head of select expression %s. Maybe the head expression is expression list? (not implemented)"));
+                String.format("Cannot find head of select expression %s.", g.V(selectExpr).elementMap().next()));
         }
         
-        // TODO this should be a default literal size (that should be ignored if the head is not a literal)
-        return Expression.Factory.create(g, head, typeFactory, procDef2, -1);
+        // NOTE: The spec does not require select heads to be lvalues, but we do.
+        //       This is because otherwise both the head and the patterns will be
+        //       literals, and we won't be able to tell their size (unless there is a default). 
+        //       Of the two, heads are more likely to be lvalues: it makes sense to pattern match lvalues to literal patterns, but not the other way (e.g. JAVA does not allow that either). 
+      //  return Expression.Factory.createLvalue(state, head);
+        return Expression.Factory.create(state, selectExpr, null);
     }
 
     @Override

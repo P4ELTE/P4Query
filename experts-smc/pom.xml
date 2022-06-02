@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright 2020-2021, Eötvös Loránd University.
+    Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
     All rights reserved.
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,8 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
+
+    Author: Dániel Lukács, 2022
 
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -54,6 +56,12 @@
     </dependency>
 
     <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.13.2</version>
+    </dependency>
+
+    <dependency>
 
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -66,6 +74,30 @@
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
         <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
+          <plugin>
+              <groupId>com.mycila</groupId>
+              <artifactId>license-maven-plugin</artifactId>
+              <version>3.0</version>
+              <configuration>
+                  <header>${maven.multiModuleProjectDirectory}/experts-smc/NOTICE.md</header>
+                  <aggregate>true</aggregate>
+                  <excludes>
+                      <exclude>**/conf/**</exclude>
+                      <exclude>**/*.p4</exclude>
+                      <exclude>**/*.prism</exclude>
+                      <exclude>**/*.pctl</exclude>
+                  </excludes>
+              </configuration>
+              <executions>
+                  <execution>
+                      <goals>
+                          <goal>check</goal>
+                      </goals>
+                  </execution>
+              </executions>
+          </plugin>
+
+
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
           <version>3.1.0</version>

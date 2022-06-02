@@ -44,12 +44,17 @@ public class CallSitesImpl {
         @Singleton
         @CallSites
         public Status analyse(GraphTraversalSource g, @SyntaxTree Status s, @AbstractSyntaxTree Status a, @SymbolTable Status t){
+
+            long startTime = System.currentTimeMillis();
             whichCallInvokesWhichFunction(g);
             whichCallOwnsWhichArguments(g);
             whichFunctionOwnsWhichParameters(g);
             whichArgumentsInstantiateWhichParameters(g);
 
             fixParserParameters(g); 
+
+            long stopTime = System.currentTimeMillis();
+            System.out.println(String.format("%s complete. Time used: %s ms.", CallSites.class.getSimpleName() , stopTime - startTime));
             return new Status();
         }
         
@@ -59,12 +64,17 @@ public class CallSitesImpl {
                 __.has(Dom.Syn.V.CLASS, "TableDeclarationContext"),
                 __.has(Dom.Syn.V.CLASS, "PackageTypeDeclarationContext"),
                 __.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"),
+                __.has(Dom.Syn.V.CLASS, "ActionDeclarationContext"),
                 __.has(Dom.Syn.V.CLASS, "ParserDeclarationContext"))
             .as("decl")
             .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).inV()
+            .optional( 
+                __.inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE).outV()
+                  .outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).inV())
             .repeat(__.in(Dom.SYN))
             .until(
-                __.or(__.has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext"),
+                __.or(__.has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext")
+                        .outE(Dom.SYN).has(Dom.Syn.E.RULE, "argumentList"),
                       __.has(Dom.Syn.V.CLASS, "DirectApplicationContext"),
                       __.has(Dom.Syn.V.CLASS, "InstantiationContext"),
                       __.has(Dom.Syn.V.CLASS, "ExpressionContext")
@@ -139,9 +149,12 @@ public class CallSitesImpl {
                     .has(Dom.Sites.ROLE, Dom.Sites.Role.HAS_PARAMETER).inV()
                     .toList();
 
-                if(args.size() != pars.size()) 
+                if(args.size() != pars.size()){ 
+                    System.err.println(g.V(call).elementMap().next());
+                    System.err.println(g.V(func).elementMap().next());
                     throw 
                         new IllegalStateException("args.size() != pars.size()");
+                }
 
                 for (int i = 0; i < args.size(); i++) {
                     g.addE(Dom.SITES)

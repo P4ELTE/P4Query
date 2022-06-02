@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,15 +13,19 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import p4query.applications.smc.hir.typing.IRType;
+import p4query.applications.smc.hir.typing.LocalStruct;
 
 // note: this is somewhat different from GlobalMemoryLayout, because two parameters may have the same name
 //
@@ -30,9 +34,14 @@ public class LocalMemoryLayout  {
   private final List<Segment> layout = new LinkedList<>();
   private final LinkedHashMap<String, Segment> index = new LinkedHashMap<>();
 
-  public LocalMemoryLayout(LinkedHashMap<String, IRType> parameters) {
+  public LocalMemoryLayout(LocalStruct local) {
+      LinkedHashMap<String, IRType> parameters = local.getFields();
+
+      LinkedHashSet<Map.Entry<String, IRType>> allEntries = new LinkedHashSet<>();
+      allEntries.addAll(parameters.entrySet());
+
       int currAddr = 0;
-      for (Map.Entry<String, IRType> entry : parameters.entrySet()) {
+      for (Map.Entry<String, IRType> entry : allEntries) {
           String parName = entry.getKey();    
           IRType parType = entry.getValue();    
 
@@ -47,6 +56,8 @@ public class LocalMemoryLayout  {
      //     } else {
      //         size = parType.getSize();
      //     }
+
+//        System.out.println(parName + " : " + parType);
 
           Segment segment = new Segment(parType, currAddr, "", parName, true);
           layout.add(segment);

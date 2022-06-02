@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir.typing;
 
@@ -26,6 +28,7 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import p4query.ontology.Dom;
 
+// TODO this is not a Struct. rename this to GlobalComposite
 public class GlobalStruct implements Composite {
 
     private final LinkedHashMap<String, IRType> fields = new LinkedHashMap<>(); // stored in input order
@@ -50,7 +53,10 @@ public class GlobalStruct implements Composite {
                     .values("value"))
                 .by(__.outE(Dom.SYMBOL)
                     .has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE)
-                    .inV())
+                    .inV()
+                    .optional(__.inE(Dom.SYMBOL) // runs in case of typedefs
+                                .has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+                                .outV()))
                 .toList();
 
         for (Map<String,Object> m : ms) {
@@ -86,6 +92,9 @@ public class GlobalStruct implements Composite {
         return fields;
     }
     
-
+    @Override
+    public String toString() {
+        return "GlobalStruct[fields = " + getFields().toString() + "]";
+    }
     
 }

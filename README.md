@@ -1,3 +1,12 @@
+
+# Navigation
+
+For information about the software related to **"Model checking-based performance prediction for P4 by D. Lukács, G. Pongrácz, M. Tejfel"**, please see [this page](docs/applications/cost-analysis.md).
+
+For information about the software related to **"Component-based error detection of P4 programs by G. Tóth, M. Tejfel"**, please see [this page](docs/user_guide.md).
+
+For information about the software related to **"P4Query: Static Analyser Framework by D. Lukács, G. Tóth, M. Tejfel"**, please see the following sections.
+
 # P4Query
 
 ## :warning: *Stability warning* :warning:

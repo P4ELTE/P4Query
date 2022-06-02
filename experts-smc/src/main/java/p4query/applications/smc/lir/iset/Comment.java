@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.lir.iset;
+
+import java.io.PrintStream;
 
 public class Comment implements StackInstruction {
 
@@ -35,4 +39,17 @@ public class Comment implements StackInstruction {
             return "";
         return comment ;
     }
+
+    @Override
+    public void toPrism(PrintStream os) {
+        if(comment.isEmpty()){
+            os.println();
+            return;
+        }
+
+        os.println("// " + comment);
+    }
+
+    
+    
 }

@@ -86,7 +86,11 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
+
+    bit<32> y = 42;
+
     action drop() {
+        bit<32> x = y;
         mark_to_drop(standard_metadata);
     }
     
@@ -109,11 +113,19 @@ control MyIngress(inout headers hdr,
         size = 1024;
         default_action = drop();
     }
-    
+
+    MyEgress() egress;
+
     apply {
-        if (hdr.ipv4.isValid()) {
-            ipv4_lpm.apply();
-        } else {}
+        bit<32> x;
+        x = 3;
+        egress.apply(hdr, meta, standard_metadata);
+        MyEgress.apply(hdr, meta, standard_metadata);
+        if (!hdr.ipv4.isValid()) {
+           if(ipv4_lpm.apply().hit){
+           }  ; 
+           ipv4_lpm.apply();
+        } ;
     }
 }
 

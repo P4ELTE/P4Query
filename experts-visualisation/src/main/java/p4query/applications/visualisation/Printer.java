@@ -65,7 +65,7 @@ public class Printer implements Application {
     @Override
     public Status run() throws IOException, TransformerException, InterruptedException {
         System.out.println("visu: " + cli);
-
+ 	long startTimeApp = System.currentTimeMillis();
         Map<Class<? extends Annotation>, Provider<Status>> providers = new HashMap<>();
         providers.put(SyntaxTree.class, st);
         providers.put(AbstractSyntaxTree.class, ast);
@@ -104,6 +104,8 @@ public class Printer implements Application {
 
         for (String str : cmd.names) {
             Class<? extends Annotation> a = analysesMap.get(str);
+            if(providers.get(a) == null)
+                throw new IllegalArgumentException("No analyser found with name " + a);
             providers.get(a).get();
         }
 
@@ -112,6 +114,8 @@ public class Printer implements Application {
                               true, 
                               GraphUtils.Extension.SVG);
         
+        long stopTimeApp = System.currentTimeMillis();
+        System.out.println(String.format("Application complete. Time used: %s ms.", stopTimeApp - startTimeApp));
         return new Status();
     }
 

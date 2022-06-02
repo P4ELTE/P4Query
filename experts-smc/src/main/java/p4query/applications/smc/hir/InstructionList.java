@@ -1,5 +1,5 @@
 /**
- * Copyright 2020-2021, Eötvös Loránd University.
+ * Copyright 2020-2022, Dániel Lukács, Eötvös Loránd University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Author: Dániel Lukács, 2022
  */
 package p4query.applications.smc.hir;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,25 +34,18 @@ import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import p4query.applications.smc.hir.iset.Instruction;
-import p4query.applications.smc.hir.typing.IRType;
 import p4query.ontology.Dom;
 
 // NOTE this is polynomial time, but depth-first traversal is missing from gremlin
 public class InstructionList {
    private List<Instruction> instructions;
 
-   private GraphTraversalSource g;
-   private Vertex sourceVertex;
-
-   private IRType.SingletonFactory typeFactory;
-
    private Instruction.SingletonFactory factory;
 
    // TODO split this using a builder or something
-   public InstructionList(GraphTraversalSource g, Vertex v, IRType.SingletonFactory typeFactory, ProcedureDefinition procDef, InstructionLayout.Builder layout){
-      this.sourceVertex = v;
-      this.g = g;
-      this.typeFactory = typeFactory;
+   public InstructionList(CompilerState state, Vertex v){
+
+      GraphTraversalSource g = state.getG();
 
       Edge ee = g.V(v).outE(Dom.CFG)
                          .has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.ENTRY)
@@ -72,17 +68,32 @@ public class InstructionList {
       //  .by(__.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FALSE_FLOW))
       //  .next();
 
-      Map<Vertex, Vertex> flows = 
+      Map<Vertex, Vertex> flows =  new HashMap<>();
+
+      List<Map<String, Object>> flowEdges = 
          g.E(ee).repeat(
                    __.inV().outE(Dom.CFG)
                      .or(__.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FLOW),
                          __.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.TRUE_FLOW),
                          __.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FALSE_FLOW))) 
                 .emit(__.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FLOW))
-                .toStream()
-                .collect(
-                    Collectors.toMap(e -> e.outVertex(), e -> e.inVertex()));
-                  
+                .dedup() // paths may intersect, no need to reprocess edges
+                .project("src", "dst")
+                .by(__.outV())
+                .by(__.inV())
+                .toList();
+      for (Map<String, Object> edge : flowEdges) {
+         Vertex src = (Vertex) edge.get("src");
+         Vertex dst = (Vertex) edge.get("dst");
+
+         if(flows.containsKey(src)) 
+            throw new IllegalStateException("Duplicate key " + g.V(src).elementMap().next());
+
+         flows.put(src, dst);
+      }
+//                .toStream()
+//                .collect(
+//                    Collectors.toMap(e -> e.outVertex(), e -> e.inVertex()));
 
       Map<Vertex, Vertex> trueFlows = 
          g.E(ee).repeat(
@@ -91,10 +102,10 @@ public class InstructionList {
                          __.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.TRUE_FLOW),
                          __.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FALSE_FLOW))) 
                 .emit(__.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.TRUE_FLOW))
+                .dedup() // paths may intersect, no need to reprocess edges
                 .toStream()
                 .collect(
                    Collectors.toMap(e -> e.outVertex(), e -> e.inVertex()));
-                
 
       Map<Vertex, Vertex> falseFlows = 
          g.E(ee).repeat(
@@ -103,10 +114,10 @@ public class InstructionList {
                          __.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.TRUE_FLOW),
                          __.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FALSE_FLOW))) 
                 .emit(__.has(Dom.Cfg.E.ROLE, Dom.Cfg.E.Role.FALSE_FLOW))
+                .dedup() // paths may intersect, no need to reprocess edges
                 .toStream()
                 .collect(
                    Collectors.toMap(e -> e.outVertex(), e -> e.inVertex()));
-
 
       // TODO this could be useful elsewhere. add the ordering as graph edges.
       // this algorithm sorts vertices in pre-order (with true edges visited before false edges).
@@ -131,6 +142,7 @@ public class InstructionList {
       Stack<Vertex> stk = new Stack<>();
       Map<Vertex, Vertex> cjmps = new HashMap<>();
       Map<Vertex, Vertex> jmps = new HashMap<>();
+      Set<Vertex> earlyExits = new HashSet<>();
 
       stk.push(entry); 
       while(!stk.isEmpty()){
@@ -147,8 +159,13 @@ public class InstructionList {
             continue;
          }
 
-         if(rets.contains(s)){
-            continue;
+         if(rets.contains(s) && !trueFlows.containsKey(s)){
+            // This may be a conditional with no false flows and no successor statement.
+            // This means that it should return when the condition is false.
+            // So in this case, the conditional node will be a return node, but it will also have a true flow
+            //   that we need still need to process.
+
+               continue;
          }
 
          if(falseFlows.containsKey(s)){
@@ -156,14 +173,19 @@ public class InstructionList {
             stk.push(d);
             cjmps.put(s, d);
          } else {
-            System.err.println("Warning: no false edge");
+            // note: this will be executed for conditional nodes without false flows.
+            //       in theory, this should only happen if
+            //       1) the conditional is one-way (i.e. no else), and
+            //       2) the conditional is the last statement of the function (otherwise a false flow points to the next statement).
+            //       this is why we exit the procedure in this case.
+            earlyExits.add(s); 
          }
 
          if(trueFlows.containsKey(s)){
             Vertex d = trueFlows.get(s);
             stk.push(d);
          } else {
-            System.out.println(trueFlows);
+            System.err.println(trueFlows);
             System.err.println(g.V(s).elementMap().next());
             
             throw new IllegalStateException("Error: found non-return CFG node without out-flow");
@@ -172,17 +194,15 @@ public class InstructionList {
 
       this.instructions = new LinkedList<>();
 
-      layout.registerAllCondJumps(cjmps);
-      layout.registerAllJumps(jmps);
+      state.getInstLayout().registerAllCondJumps(cjmps);
+      state.getInstLayout().registerAllJumps(jmps);
+      state.getInstLayout().registerAllEarlyExits(earlyExits);
 
-      factory = new Instruction.SingletonFactory(g, cjmps, jmps, typeFactory, procDef);
+      factory = new Instruction.SingletonFactory(state, cjmps, jmps);
+
       for (Vertex vert : verts) {
-         this.instructions.addAll(factory.create(vert));
+            this.instructions.addAll(factory.create(vert));
       }
-
-// Instruction will use the CFG to add returns, so this is not needed.
-//      if(procedureDefinition != null)
-//         this.instructions.add(new ProcedureDone(procedureDefinition));
    }
 
    public List<Instruction> getList(){
