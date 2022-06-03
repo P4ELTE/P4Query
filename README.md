@@ -42,7 +42,7 @@ We use [Graphviz](https://graphviz.org/) to visualize the graphs, so we recommen
 
 ### Start from jar
 
-For trying the tool, download the [release](https://github.com/P4ELTE/P4Query/releases/download/v1.0/p4query-v1.0-prealpha.zip), unpack the ZIP and launch it using the following command: 
+For trying the tool, download the [release](https://github.com/P4ELTE/P4Query/releases/download/v1.1/p4query-v1.1-prealpha.zip), unpack the ZIP and launch it using the following command: 
 
 ```sh
 $ ./p4query.cmd draw -A ControlFlow
