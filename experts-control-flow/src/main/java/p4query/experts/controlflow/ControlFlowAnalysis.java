@@ -17,9 +17,11 @@
 package p4query.experts.controlflow;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -27,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Scanner;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Stream;
@@ -138,11 +141,63 @@ public class ControlFlowAnalysis {
                 //     code.add(key.getValue().toString());
                 // }
                 whenWriteStringUsingBufferedWritter_thenCorrect("e:/ProgramFiles/Labor/asd.txt", code);
+                
             } catch (IOException e) {
                 e.printStackTrace();
             }
         
         }
+
+        public static void writeAll(String filename, ArrayList<String> code) 
+        throws IOException {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
+            StringBuilder toWrite;
+            String currentChar;
+            int tabsNeeded = 0;
+            for(int i = 0;i<code.size();++i){
+                toWrite = new StringBuilder();
+                currentChar = code.get(i).replace("{","{\n" + new String(new char[tabsNeeded+1]).replace("\0", "\t"))
+                        ;
+                while(i<code.size()-1 && !(currentChar.equals(";") || currentChar.equals("}"))){
+                    if(currentChar.startsWith("{")){
+                        tabsNeeded++;
+                    }
+                    toWrite.append(getCurrent(i, code, currentChar));
+                    i++;
+                    currentChar = code.get(i).replace("{","{\n" + new String(new char[tabsNeeded+1]).replace("\0", "\t"));
+                }
+                if(currentChar.equals(";") || currentChar.equals("}") || currentChar.equals("{")){
+                    toWrite.append(currentChar + "\n");
+                }
+                boolean isCurly = toWrite.toString().contains("{");
+                toWrite.insert(0, (isCurly || currentChar.equals("}")) ? new String(new char[tabsNeeded-1]).replace("\0", "\t")
+                            : new String(new char[tabsNeeded]).replace("\0", "\t"));
+                if(currentChar.startsWith("{")){
+                    tabsNeeded++;
+                }else if(currentChar.equals("}")){
+                    tabsNeeded--;
+                }
+                writer.write(toWrite.toString());
+
+            }
+            writer.close();
+        }
+        private static String getCurrent(int i, ArrayList<String> code, String currentChar) {
+            String ret = "";
+            if(i+1 < code.size()){
+                if(code.get(i+1).equals("<") || code.get(i).equals("<") || code.get(i+1).equals(">")
+                   || code.get(i).equals(".") || code.get(i+1).equals(".")
+                   || code.get(i).equals("(") || code.get(i).equals(")")
+                   || code.get(i+1).equals("(") || code.get(i+1).equals(")")
+                   || code.get(i+1).equals(";") || code.get(i+1).equals(",")){
+                    ret = currentChar;
+                }else{
+                    ret = currentChar + " ";
+                }
+            }
+            return ret;
+        }
+
 
         public static void whenWriteStringUsingBufferedWritter_thenCorrect(String filename, ArrayList<String> code) 
         throws IOException {
@@ -153,7 +208,6 @@ public class ControlFlowAnalysis {
                 String toWrite = "";
                 while(i < code.size() && 
                     !(code.get(i).equals(";") || code.get(i).equals("\\{") || code.get(i).equals("\\}"))){
-                        
                         if(code.get(i).equals("bit")){
                             toWrite += code.get(i) + code.get(i+1) + code.get(i+2) + code.get(i+3) + " ";
                             i+=3;
@@ -253,8 +307,11 @@ public class ControlFlowAnalysis {
             //try 1
             ArrayList<String> outputList = new ArrayList<>();
             recursiveWrite(g.V(), g.V().asAdmin().clone(), 0L, outputList);
+
             try {
-                whenWriteStringUsingBufferedWritter_thenCorrect("e:/ProgramFiles/Labor/output.txt", outputList);
+                //whenWriteStringUsingBufferedWritter_thenCorrect("e:/ProgramFiles/Labor/output.txt", outputList);
+                
+                writeAll("e:/ProgramFiles/Labor/output.txt", outputList);
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -267,13 +324,14 @@ public class ControlFlowAnalysis {
         private static void recursiveWrite(GraphTraversal<Vertex, Vertex> g, GraphTraversal<Vertex, Vertex> gClone,  Long nodeId, ArrayList<String> outputList){   
             // GraphTraversal<Vertex, Vertex> newT = g.asAdmin().clone();
             // System.out.println(nodeId);
+            
             List<Object> nodeIdList = gClone
             .has(Dom.Syn.V.NODE_ID, nodeId).outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV()
             .values(Dom.Syn.V.NODE_ID).toList()
             ;  
             if(nodeIdList.size() == 0){
                 List<Object> classList = g.asAdmin().clone().has(Dom.Syn.V.NODE_ID, nodeId).values(Dom.Syn.V.VALUE).toList();
-                outputList.add(classList.get(0).toString());
+                outputList.add(classList.get(0).toString().replace("\\",""));
             }else{
                 // System.out.println(nodeIdList);
                 ArrayList<Object> checked = new ArrayList<>();
@@ -281,6 +339,7 @@ public class ControlFlowAnalysis {
                     if(!checked.contains(o)){
                         checked.add(o);
                         try{
+                            
                             recursiveWrite(g, g.asAdmin().clone().has(Dom.Syn.V.NODE_ID, o), (Long) o, outputList);
                         }catch(Exception e){
                             //System.out.println(e.getMessage());
