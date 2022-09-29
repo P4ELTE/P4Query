@@ -133,13 +133,6 @@ public class ControlFlowAnalysis {
                     code.add(keys.get(key).toString());
                 // do something
                 }
-                // Stream<Map.Entry<Object, Object>> sorted = keys.entrySet().stream().sorted();
-                // sorted.forEach(a -> {
-                //     code.add(a.getValue().toString());
-                // });
-                // for (Map.Entry<Object,Object> key : keys.entrySet()){
-                //     code.add(key.getValue().toString());
-                // }
                 whenWriteStringUsingBufferedWritter_thenCorrect("e:/ProgramFiles/Labor/asd.txt", code);
                 
             } catch (IOException e) {
@@ -151,6 +144,7 @@ public class ControlFlowAnalysis {
         public static void writeAll(String filename, ArrayList<String> code) 
         throws IOException {
             BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
+            boolean endOfBasicIncludes = false;
             StringBuilder toWrite;
             String currentChar;
             int tabsNeeded = 0;
@@ -177,7 +171,11 @@ public class ControlFlowAnalysis {
                 }else if(currentChar.equals("}")){
                     tabsNeeded--;
                 }
-                writer.write(toWrite.toString());
+                if(endOfBasicIncludes){
+                    writer.write(toWrite.toString());
+                }else{
+                    endOfBasicIncludes = toWrite.toString().equals("package V1Switch<H, M>(Parser<H, M> p, VerifyChecksum<H, M> vr, Ingress<H, M> ig, Egress<H, M> eg, ComputeChecksum<H, M> ck, Deparser<H> dep);\n");
+                }
 
             }
             writer.close();
@@ -259,61 +257,14 @@ public class ControlFlowAnalysis {
 
 
         private static void  getCodeFromGraph(GraphTraversalSource g){       
-            // try 4
-            //     List<Object> keys = g.V().repeat(__.outE(Dom.SYN).inV()).until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
-            //    .values(Dom.Syn.V.NODE_ID).toList();
-            //     for (Object key : keys){
-            //         System.out.print(key + ",");
-            //     }
-            // end try 4
+            System.out.println("Code generation started");
 
-            //try 3
-            // Map<Object,Object> keys = g.V().repeat(__.outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV()).until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
-            // .group()
-            // .by(__.values(Dom.Syn.V.NODE_ID))
-            // .by(__.values(Dom.Syn.V.CLASS)).next();
-
-            // for (Map.Entry<Object,Object> key : keys.entrySet()){
-            //     System.out.println(key.getValue() + " " + key.getKey());
-            // }
-            // end try 3
-
-            //try 2
-            System.out.println("started");
-            // List<Object> keys = g.V()
-            // //.has(Dom.Syn.V.CLASS, "ControlTypeDeclarationContext")
-            // .has(Dom.Syn.V.NODE_ID, 0L).outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV()
-            // .values(Dom.Syn.V.NODE_ID).toList()
-            // //  .group()
-            // // .by(__.values(Dom.Syn.V.NODE_ID))
-            // // .by(__.values(Dom.Syn.V.CLASS))
-            // ;  
-            // System.out.println(keys);
-
-            // keys = g.V()
-            // //.has(Dom.Syn.V.CLASS, "ControlTypeDeclarationContext")
-            // .has(Dom.Syn.V.NODE_ID, 4285).outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV()
-            // .values(Dom.Syn.V.NODE_ID).toList()
-            // //  .group()
-            // // .by(__.values(Dom.Syn.V.NODE_ID))
-            // // .by(__.values(Dom.Syn.V.CLASS))
-            // ;  
-            // System.out.println(keys);
-            // for (Map.Entry<Object,Object> key : keys.entrySet()){
-            //     System.out.println(key.getValue() + " " + key.getKey());
-            // }
-            //end try 2
-
-            //try 1
             ArrayList<String> outputList = new ArrayList<>();
             recursiveWrite(g.V(), g.V().asAdmin().clone(), 0L, outputList);
-
+            System.out.println("Code writing started");
             try {
-                //whenWriteStringUsingBufferedWritter_thenCorrect("e:/ProgramFiles/Labor/output.txt", outputList);
-                
                 writeAll("e:/ProgramFiles/Labor/output.txt", outputList);
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
             //end try 1
@@ -321,10 +272,7 @@ public class ControlFlowAnalysis {
             
         }
 
-        private static void recursiveWrite(GraphTraversal<Vertex, Vertex> g, GraphTraversal<Vertex, Vertex> gClone,  Long nodeId, ArrayList<String> outputList){   
-            // GraphTraversal<Vertex, Vertex> newT = g.asAdmin().clone();
-            // System.out.println(nodeId);
-            
+        private static void recursiveWrite(GraphTraversal<Vertex, Vertex> g, GraphTraversal<Vertex, Vertex> gClone,  Long nodeId, ArrayList<String> outputList){             
             List<Object> nodeIdList = gClone
             .has(Dom.Syn.V.NODE_ID, nodeId).outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV()
             .values(Dom.Syn.V.NODE_ID).toList()
@@ -347,71 +295,6 @@ public class ControlFlowAnalysis {
                     }
                 }
             }
-
-
-            // int ord = 0;
-            // boolean isMore = true;
-            //try 3
-            // tryRecursiveWrite(g.sideEffect(__.outE().has(Dom.Syn.E.ORD, 2).inV())); 
-
-           
-           //.values(Dom.Syn.V.NODE_ID).toList();
-            // for (Object key : keys){
-            //     System.out.println(key);
-            // }
-            // end try 3
-            /* próbáljam meg, hogy adott nodeID-tól megyek
-             * sideeffect-ként nem megy végig, csak kigyűjt információkat
-             * .values-zal nodeid-kat, tolist ?
-             * .sideeffect function, ezen belül megadhatok repeat-tel, de a sideeffect előttitől folytatja
-             * optprotcalc java-ban van ez, aggregate-tel szedett ki dolgokat, azzal lépett tovább
-             */
-            
-            //try 2
-            // while(isMore){
-            //     System.out.println("ord: " + ord);
-            //     try{
-            //         tryRecursiveWrite(g.outE().has(Dom.Syn.E.ORD, ord).inV()); 
-            //         //tryRecursiveWrite(g, ord, 4274); 
-            //     }catch(Exception e){
-            //         System.out.println("error: "  + e.getMessage());
-            //         isMore = false;
-            //     }
-            //     ord++;
-            // }
-
-            //end
-            
-            // try 1
-            // Map<Object, Object> keys =  g.outE(Dom.SYN)
-            //     .group()
-            //     .by(__.values(Dom.Syn.E.ORD))
-            //     .by(__.values(Dom.Syn.E.RULE)).next();
-            
-            // if(keys.size()>0){
-            //     int limit = 0;
-            //     for (Map.Entry<Object,Object> key : keys.entrySet()){
-            //         int ord = Integer.parseInt(key.getKey().toString());                    
-            //         if(ord > limit){
-            //             limit = ord;
-            //         }
-            //     }
-            //     for(int i = 0; i<=limit;++i){
-            //         System.out.println(i);
-            //         tryRecursiveWrite(g.has(Dom.Syn.E.ORD, i).inV()); 
-            //     }
-            // }
-            // else{
-            //     keys =  g
-            //     .group()
-            //     .by(__.values(Dom.Syn.V.NODE_ID))
-            //     .by(__.values(Dom.Syn.V.VALUE)).next();
-
-            //     for (Map.Entry<Object,Object> key : keys.entrySet()){
-            //         System.out.print(key.getValue() + " ");
-            //     }
-            // }
-            // end try 1
         }
         
 
