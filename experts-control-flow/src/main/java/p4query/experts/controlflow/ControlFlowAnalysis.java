@@ -32,6 +32,8 @@ import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 
 import javax.inject.Singleton;
@@ -50,6 +52,7 @@ import p4query.ontology.Status;
 
 import org.codejargon.feather.Provides;
 
+import java.util.concurrent.Future;
 import p4query.ontology.analyses.AbstractSyntaxTree;
 import p4query.ontology.analyses.ControlFlow;
 import p4query.ontology.analyses.SymbolTable;
@@ -57,7 +60,7 @@ import p4query.ontology.analyses.SyntaxTree;
 
 public class ControlFlowAnalysis {
 
-
+        private static volatile int remainingThreads;
     // NOTE: parsers are not structured language elements, we don't add return edges between parser states
     // NOTE: parser control flow is complicated, but it is because of the grammar
     // TODO: test on 1-way conditionals
@@ -174,7 +177,7 @@ public class ControlFlowAnalysis {
                 if(endOfBasicIncludes){
                     writer.write(toWrite.toString());
                 }else{
-                    endOfBasicIncludes = toWrite.toString().equals("package V1Switch<H, M>(Parser<H, M> p, VerifyChecksum<H, M> vr, Ingress<H, M> ig, Egress<H, M> eg, ComputeChecksum<H, M> ck, Deparser<H> dep);\n");
+                    endOfBasicIncludes = true;
                 }
 
             }
@@ -254,47 +257,131 @@ public class ControlFlowAnalysis {
 
 
 //========================================================================================================================================================
+        private static void runGraphToCode(Integer n, ArrayList<String> outputList, GraphTraversalSource g){
+            
+            long singleElapsed;
+            long multiElapsed;
+            while(n-- > 0){
+                //System.out.println((n + 1) + " remaining");
+                //single-thread
+                long start = System.currentTimeMillis();   
+                //System.out.println("SINGLE - Code generation started");
+                List<Object> possibleEndOfIncludeList = g.V().asAdmin().clone().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
+                Long endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
+                outputList = recursiveWrite(g.V().asAdmin().clone(), g.V().asAdmin().clone(), 0L, new ArrayList<>(), new ArrayList(), null, endOfInclude);
 
+                singleElapsed = System.currentTimeMillis() - start;
+                //System.out.println("Elapsed: " + (singleElapsed/1000F) + "sec");
 
-        private static void  getCodeFromGraph(GraphTraversalSource g){       
-            System.out.println("Code generation started");
+                //multi-thread
+                start = System.currentTimeMillis();   
 
-            ArrayList<String> outputList = new ArrayList<>();
-            recursiveWrite(g.V(), g.V().asAdmin().clone(), 0L, outputList);
-            System.out.println("Code writing started");
-            try {
-                writeAll("e:/ProgramFiles/Labor/output.txt", outputList);
-            } catch (IOException e) {
-                e.printStackTrace();
+                //System.out.println("Getting control declaration nodes");
+                List<Object> controlLocalDeclarationIds = g.V().asAdmin().clone().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().values(Dom.Syn.V.NODE_ID).toList();
+
+                ExecutorService executorService = Executors.newFixedThreadPool(Math.min(controlLocalDeclarationIds.size(), Runtime.getRuntime().availableProcessors()));
+
+                //System.out.println("MULTI - Code generation started");
+                possibleEndOfIncludeList = g.V().asAdmin().clone().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
+                endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
+                outputList = recursiveWrite(g.V().asAdmin().clone(), g.V().asAdmin().clone(), 0L, new ArrayList<>(), controlLocalDeclarationIds, executorService, endOfInclude);
+
+                multiElapsed = System.currentTimeMillis() - start;
+                //System.out.println("Elapsed seconds: " + (multiElapsed/1000F) + "sec");
+                System.out.println((singleElapsed/1000F) + "\t" + (multiElapsed/1000F));
             }
+        }
+
+        private static void  getCodeFromGraph(GraphTraversalSource g){     
+            remainingThreads = Runtime.getRuntime().availableProcessors();
+            ArrayList<String> outputList = new ArrayList<>();     
+            boolean isBasicRun = true;
+            if(isBasicRun){ 
+                // //multi-thread
+                // long start = System.currentTimeMillis();   
+
+                // //System.out.println("Getting control declaration nodes");
+                // List<Object> controlLocalDeclarationIds = g.V().asAdmin().clone().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().values(Dom.Syn.V.NODE_ID).toList();
+                // List<Object> possibleEndOfIncludeList = g.V().asAdmin().clone().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
+                // Long endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
+                // ExecutorService executorService = Executors.newFixedThreadPool(Math.min(controlLocalDeclarationIds.size(), Runtime.getRuntime().availableProcessors()));
+
+                // System.out.println("MULTI - Code generation started");
+                // outputList = recursiveWrite(g.V().asAdmin().clone(), g.V().asAdmin().clone(), 0L, new ArrayList<>(), controlLocalDeclarationIds, executorService, endOfInclude);
+
+                // long multiElapsed = System.currentTimeMillis() - start;
+                //System.out.println("Elapsed seconds: " + (multiElapsed/1000F) + "sec");  
+
+                long start = System.currentTimeMillis();   
+                //System.out.println("SINGLE - Code generation started");
+                List<Object> possibleEndOfIncludeList = g.V().asAdmin().clone().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
+                Long endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
+                outputList = recursiveWrite(g.V().asAdmin().clone(), g.V().asAdmin().clone(), 0L, new ArrayList<>(), new ArrayList(), null, endOfInclude);
+
+                long singleElapsed = System.currentTimeMillis() - start;
+                System.out.println("Elapsed seconds: " + (singleElapsed/1000F) + "sec");  
+                System.out.println("Code writing started");
+                try {
+                    writeAll("e:/ProgramFiles/Labor/output.p4", outputList);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }    
+            }else{
+                runGraphToCode(6, outputList, g);
+            }
+            
             //end try 1
             
             
         }
 
-        private static void recursiveWrite(GraphTraversal<Vertex, Vertex> g, GraphTraversal<Vertex, Vertex> gClone,  Long nodeId, ArrayList<String> outputList){             
+        private static ArrayList<String> recursiveWrite(GraphTraversal<Vertex, Vertex> g, GraphTraversal<Vertex, Vertex> gClone,  Long nodeId, ArrayList<String> outputList, List<Object> controlLocalDeclarationIds, ExecutorService executorService, Long endOfInclude){             
+            //System.out.println(nodeId);
+            ArrayList<String> returnList = new ArrayList<>();
+            
             List<Object> nodeIdList = gClone
             .has(Dom.Syn.V.NODE_ID, nodeId).outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV()
             .values(Dom.Syn.V.NODE_ID).toList()
             ;  
-            if(nodeIdList.size() == 0){
+            if(nodeIdList.size() == 0 && nodeId > endOfInclude){
                 List<Object> classList = g.asAdmin().clone().has(Dom.Syn.V.NODE_ID, nodeId).values(Dom.Syn.V.VALUE).toList();
-                outputList.add(classList.get(0).toString().replace("\\",""));
+                if(classList.size()>0){
+                    returnList.add(classList.get(0).toString().replace("\\",""));
+                }
             }else{
-                // System.out.println(nodeIdList);
-                ArrayList<Object> checked = new ArrayList<>();
-                for(Object o : nodeIdList){
-                    if(!checked.contains(o)){
-                        checked.add(o);
-                        try{
-                            
-                            recursiveWrite(g, g.asAdmin().clone().has(Dom.Syn.V.NODE_ID, o), (Long) o, outputList);
-                        }catch(Exception e){
-                            //System.out.println(e.getMessage());
+                if(controlLocalDeclarationIds.contains((Object) nodeId) && remainingThreads > 0){
+                    remainingThreads--;
+                    Future<ArrayList<String>> futureList0 = executorService.submit(() -> 
+                        recursiveWrite(g, g.asAdmin().clone().has(Dom.Syn.V.NODE_ID, nodeIdList.get(0)), (Long) nodeIdList.get(0),
+                         outputList, controlLocalDeclarationIds, executorService, endOfInclude));
+                    ArrayList<String> list = 
+                        recursiveWrite(g, g.asAdmin().clone().has(Dom.Syn.V.NODE_ID, nodeIdList.get(1)), (Long) nodeIdList.get(1),
+                         outputList, controlLocalDeclarationIds, executorService, endOfInclude);
+                    try{
+                        returnList.addAll(futureList0.get());
+                        remainingThreads++;
+                        returnList.addAll(list);
+                    }catch(Exception e){
+                        System.out.println("before get");
+                        System.out.println(e.getMessage());
+                    }
+
+                } else{
+                    ArrayList<Object> checked = new ArrayList<>();
+                    for(Object o : nodeIdList){
+                        if(!checked.contains(o)){
+                            checked.add(o);
+                            try{
+                                returnList.addAll(recursiveWrite(g, g.asAdmin().clone().has(Dom.Syn.V.NODE_ID, o), (Long) o, outputList, controlLocalDeclarationIds, executorService, endOfInclude));
+                            }catch(Exception e){
+                                System.out.println("in children");
+                                e.printStackTrace();
+                            }
                         }
                     }
-                }
+                }                
             }
+            return returnList;
         }
         
 
