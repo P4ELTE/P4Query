@@ -64,8 +64,8 @@ public class App {
     // used for default includes and input file
     public static final String CORE_P4_PATH = "core.p4";
     public static final String V1MODEL_P4_PATH = "v1model.p4";
-    //public static final String BASIC_P4_PATH = "switch-translated-to-p4-16.p4";
-    public static final String BASIC_P4_PATH = "basic4.p4";
+    public static final String BASIC_P4_PATH = "switch-translated-to-p4-16.p4";
+    //public static final String BASIC_P4_PATH = "basic_tunnel.p4";
 
     // used for implementation discovery
     private static final String EXPERTS_PACKAGE = "p4query.experts";
