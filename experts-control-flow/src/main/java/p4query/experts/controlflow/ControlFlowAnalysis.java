@@ -46,6 +46,7 @@ import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal.Admin;
+import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
@@ -108,9 +109,9 @@ public class ControlFlowAnalysis {
             // firstTaskManual(g);
             // writeWithNonRecursive(g);
             
-            //getCodeFromGraph(g, true);
+            getCodeFromGraph(g, true);
 
-            myTries(g);
+           //myTries(g);
 
             addFlowToFirstStatement(g);
             addFlowToTwoWayConditionals(g);
@@ -267,17 +268,20 @@ public class ControlFlowAnalysis {
 
 //========================================================================================================================================================
         private static void myTries(GraphTraversalSource gts){
-            mySubTry(gts.V().has(Dom.Syn.V.NODE_ID, 0), 0L);
+            System.out.println(gts.V().has(Dom.Syn.V.NODE_ID,  3188).id().toList());
+            System.out.println(gts.V().has(Dom.Syn.V.NODE_ID,  3204).id().toList());
+            Object id = 0;
+            //mySubTry(gts, id);
         }
 
-        private static void mySubTry(GraphTraversal<Vertex, Vertex> gt, Long id){
-            Admin<Vertex, Vertex> gtClone = gt.asAdmin().clone();
-            List<Object> nodeIdList = gtClone.outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV().values(Dom.Syn.V.NODE_ID).toList();
-            System.out.println(id);
-            System.out.println(nodeIdList);
+        private static void mySubTry(GraphTraversalSource gt, Object id){
+            //Admin<Vertex, Vertex> gtClone = gt.V(id).asAdmin().clone();
+            List<Vertex> children = gt.V(id).outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV().toList();
+            System.out.println(gt.V(id).values(Dom.Syn.V.NODE_ID).toList());
             try{
-                for(int i = 0; i< nodeIdList.size();++i){
-                    mySubTry(gt.outE(Dom.SYN).has(Dom.Syn.E.ORD, i).inV(),(Long) nodeIdList.get(i));
+                for(int i = 0; i< children.size();++i){
+                    Object childId = children.get(i).id();
+                    mySubTry(gt, childId);
                 }
             }catch(Exception e){
                 e.printStackTrace();
@@ -286,46 +290,78 @@ public class ControlFlowAnalysis {
         }
 
 
-        private static void runGraphToCode(Integer n, ArrayList<String> outputList, GraphTraversalSource g, Boolean cloneMode){
+        // private static void runGraphToCode(Integer n, ArrayList<String> outputList, GraphTraversalSource g, Boolean cloneMode){
+            
+        //     long singleElapsed;
+        //     long multiElapsed;
+        //     while(n-- > 0){
+        //         //System.out.println((n + 1) + " remaining");
+        //         //single-thread
+        //         long start = System.currentTimeMillis();   
+        //         //System.out.println("SINGLE - Code generation started");
+        //         List<Vertex> possibleEndOfIncludeList = g.V().asAdmin().clone().has(Dom.Syn.V.VALUE, "Deparser").toList();
+        //         Object endOfInclude = possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
+        //         if(cloneMode){
+        //             outputList = recursiveWriteV2(g, 0, new ArrayList<String>(), new ArrayList<Object>(), null, endOfInclude);
+        //         }else{
+        //             outputList = recursiveWriteNoClone(g, 0L, new ArrayList<String>(), new ArrayList<Object>(), null, endOfInclude).getValue0();
+
+        //         }
+
+        //         singleElapsed = System.currentTimeMillis() - start;
+        //         //System.out.println("Elapsed: " + (singleElapsed/1000F) + "sec");
+
+        //         //multi-thread
+        //         start = System.currentTimeMillis();   
+
+        //         //System.out.println("Getting control declaration nodes");
+        //         List<Object> controlLocalDeclarationIds = g.V().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().values(Dom.Syn.V.NODE_ID).toList();
+
+        //         ExecutorService executorService = Executors.newFixedThreadPool(Math.min(controlLocalDeclarationIds.size(), Runtime.getRuntime().availableProcessors()));
+
+        //         //System.out.println("MULTI - Code generation started");
+        //         possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
+        //         endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
+        //         if(cloneMode){
+        //             outputList = recursiveWrite(g.V(), 0L, new ArrayList<>(), controlLocalDeclarationIds, executorService, endOfInclude).getValue0();
+        //         }else{
+        //             outputList = recursiveWriteNoClone(g, 0L, new ArrayList<>(), controlLocalDeclarationIds, executorService, endOfInclude).getValue0();
+        //         }
+
+        //         multiElapsed = System.currentTimeMillis() - start;
+        //         //System.out.println("Elapsed seconds: " + (multiElapsed/1000F) + "sec");
+        //         System.out.println((singleElapsed/1000F) + "\t" + (multiElapsed/1000F));
+        //     }
+        // }
+
+
+        private static void runGraphToCodeV2(Integer n, ArrayList<String> outputList, GraphTraversalSource g){
             
             long singleElapsed;
             long multiElapsed;
             while(n-- > 0){
-                //System.out.println((n + 1) + " remaining");
                 //single-thread
                 long start = System.currentTimeMillis();   
-                //System.out.println("SINGLE - Code generation started");
-                List<Object> possibleEndOfIncludeList = g.V().asAdmin().clone().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
-                Long endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
-                if(cloneMode){
-                    outputList = recursiveWrite(g.V(), 0L, new ArrayList<String>(), new ArrayList<Object>(), null, endOfInclude).getValue0();
-                }else{
-                    outputList = recursiveWriteNoClone(g, 0L, new ArrayList<String>(), new ArrayList<Object>(), null, endOfInclude).getValue0();
 
-                }
+                List<Object> possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").id().toList();
+
+                Object endOfInclude = (Long) possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1) + 103;
+                outputList = recursiveWriteV2(g, 0, new ArrayList<String>(), new ArrayList<Vertex>(), null, endOfInclude);
 
                 singleElapsed = System.currentTimeMillis() - start;
-                //System.out.println("Elapsed: " + (singleElapsed/1000F) + "sec");
 
                 //multi-thread
                 start = System.currentTimeMillis();   
 
                 //System.out.println("Getting control declaration nodes");
-                List<Object> controlLocalDeclarationIds = g.V().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().values(Dom.Syn.V.NODE_ID).toList();
+                List<Vertex> controlLocalDeclarations = g.V().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().toList();
 
-                ExecutorService executorService = Executors.newFixedThreadPool(Math.min(controlLocalDeclarationIds.size(), Runtime.getRuntime().availableProcessors()));
-
-                //System.out.println("MULTI - Code generation started");
-                possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
-                endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
-                if(cloneMode){
-                    outputList = recursiveWrite(g.V(), 0L, new ArrayList<>(), controlLocalDeclarationIds, executorService, endOfInclude).getValue0();
-                }else{
-                    outputList = recursiveWriteNoClone(g, 0L, new ArrayList<>(), controlLocalDeclarationIds, executorService, endOfInclude).getValue0();
-                }
+                ExecutorService executorService = Executors.newFixedThreadPool(Math.min(controlLocalDeclarations.size(), Runtime.getRuntime().availableProcessors()));
+                
+                outputList = recursiveWriteV2(g, 0, new ArrayList<>(), controlLocalDeclarations, executorService, endOfInclude);
+                
 
                 multiElapsed = System.currentTimeMillis() - start;
-                //System.out.println("Elapsed seconds: " + (multiElapsed/1000F) + "sec");
                 System.out.println((singleElapsed/1000F) + "\t" + (multiElapsed/1000F));
             }
         }
@@ -334,24 +370,24 @@ public class ControlFlowAnalysis {
         private static void  getCodeFromGraph(GraphTraversalSource g, Boolean cloneMode){     
             remainingThreads = Runtime.getRuntime().availableProcessors();
             ArrayList<String> outputList = new ArrayList<>();     
-            boolean isBasicRun = true;
+            boolean isBasicRun = false;
             if(isBasicRun){ 
                 // //multi-thread
                 long start = System.currentTimeMillis();   
 
                 //System.out.println("Getting control declaration nodes");
-                List<Object> controlLocalDeclarationIds = g.V().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().values(Dom.Syn.V.NODE_ID).toList();
-                List<Object> possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
+                List<Vertex> controlLocalDeclarationIds = g.V().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().toList();
+                List<Object> possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").id().toList();
 
                 //basic4: 3188 - 3204 => 16tal tobb
-                Long endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
+                Object endOfInclude = (Long) possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1) + 103;
                 ExecutorService executorService = Executors.newFixedThreadPool(Math.min(controlLocalDeclarationIds.size(), Runtime.getRuntime().availableProcessors()));
 
                 System.out.println("MULTI - Code generation started");
                 if(cloneMode){
-                    outputList = recursiveWriteV2(g.V().has(Dom.Syn.V.NODE_ID, 0L), 0L, new ArrayList<>(), controlLocalDeclarationIds, executorService, endOfInclude);
+                    outputList = recursiveWriteV2(g, 0, new ArrayList<>(), controlLocalDeclarationIds, executorService, endOfInclude);
                 }else{
-                    outputList = recursiveWriteNoClone(g, 0L, new ArrayList<>(), controlLocalDeclarationIds, executorService, endOfInclude).getValue0();
+                    outputList = recursiveWriteNoClone(g, 0, new ArrayList<>(), controlLocalDeclarationIds, executorService, endOfInclude).getValue0();
 
                 }
 
@@ -373,7 +409,8 @@ public class ControlFlowAnalysis {
                     e.printStackTrace();
                 }    
             }else{
-                runGraphToCode(6, outputList, g, cloneMode);
+                //runGraphToCode(6, outputList, g, cloneMode);
+                runGraphToCodeV2(6,outputList, g);
             }
             
             //end try 1
@@ -382,7 +419,7 @@ public class ControlFlowAnalysis {
         }
 
 
-        private static Pair<ArrayList<String>,Integer> recursiveWriteNoClone(GraphTraversalSource graphSource,  Long nodeId, ArrayList<String> outputList, List<Object> controlLocalDeclarationIds, ExecutorService executorService, Long endOfInclude){            
+        private static Pair<ArrayList<String>,Integer> recursiveWriteNoClone(GraphTraversalSource graphSource,  Object nodeId, ArrayList<String> outputList, List<Vertex> controlLocalDeclarationIds, ExecutorService executorService, Object endOfInclude){            
             Integer count = 1; 
             //System.out.println(nodeId);
             ArrayList<String> returnList = new ArrayList<>();
@@ -392,9 +429,9 @@ public class ControlFlowAnalysis {
             ;  
             //List<Object> neededList = nodeIdList.stream().filter(e -> (Long)e > (endOfInclude + 22)).collect(Collectors.toList());
             //Both needed
-            if(nodeIdList.contains(endOfInclude+16)){
-                nodeIdList = Arrays.asList(endOfInclude+16);
-            }
+            // if(nodeIdList.contains(endOfInclude+16)){
+            //     nodeIdList = Arrays.asList(endOfInclude+16);
+            // }
             if(nodeIdList.size() == 0){// && nodeId > endOfInclude){
                 List<Object> classList = currentNode.values(Dom.Syn.V.VALUE).toList();
                 if(classList.size()>0){
@@ -442,34 +479,32 @@ public class ControlFlowAnalysis {
         }
 
 
-        //gt.asAdmin().clone().outE(Dom.SYN).inV().values(Dom.Syn.V.NODE_ID).toList());
-        private static ArrayList<String> recursiveWriteV2(GraphTraversal<Vertex, Vertex> g, Long nodeId, ArrayList<String> outputList, List<Object> controlLocalDeclarationIds, ExecutorService executorService, Long endOfInclude){  
+        private static ArrayList<String> recursiveWriteV2(GraphTraversalSource g, Object nodeId, ArrayList<String> outputList, List<Vertex> controlLocalDeclarationList, ExecutorService executorService, Object endOfInclude){  
             ArrayList<String> returnList = new ArrayList<>();
-            List<Object> nodeIdList = g.asAdmin().clone().outE(Dom.SYN)
-                .order().by(Dom.Syn.E.ORD).inV()
-                .values(Dom.Syn.V.NODE_ID).toList();  
 
-            if(nodeIdList.contains(endOfInclude+16)){
-                nodeIdList = Arrays.asList(endOfInclude+16);
+
+            List<Object> children = g.V(nodeId).outE(Dom.SYN)
+                .order().by(Dom.Syn.E.ORD).inV().id().toList();  
+
+            if(children.contains(endOfInclude)){
+                children = g.V(endOfInclude).id().toList();
             }
-            if(nodeIdList.size() == 0) {
-                List<Object> classList = g.asAdmin().clone().values(Dom.Syn.V.VALUE).toList();
+            if(children.size() == 0) {
+                List<Object> classList = g.V(nodeId).values(Dom.Syn.V.VALUE).toList();
                 if(classList.size()>0){
                     returnList.add(classList.get(0).toString().replace("\\",""));
                 }
             }else{
-                if(controlLocalDeclarationIds.contains((Object) nodeId) && remainingThreads > 0){
+                if(controlLocalDeclarationList.stream().anyMatch(node -> node.id().equals(nodeId)) && remainingThreads > 0){
                     remainingThreads--;                    
-                    final Object id0 = nodeIdList.get(0);
-                    final Object id1 = nodeIdList.get(1);
-                    final GraphTraversal<Vertex, Vertex> id0Node = g.asAdmin().clone().outE(Dom.SYN).has(Dom.Syn.E.ORD, 0).inV();
-                    final GraphTraversal<Vertex, Vertex> id1Node = g.asAdmin().clone().outE(Dom.SYN).has(Dom.Syn.E.ORD, 1).inV();
+                    final Object id0 = children.get(0);
+                    final Object id1 = children.get(1);
                     Future<ArrayList<String>> futureList0 = executorService.submit(() -> 
-                    recursiveWriteV2(id1Node, (Long) id1,
-                         outputList, controlLocalDeclarationIds, executorService, endOfInclude));
+                    recursiveWriteV2(g, id1,
+                         outputList, controlLocalDeclarationList, executorService, endOfInclude));
                          ArrayList<String> n0 = 
-                         recursiveWriteV2(id0Node, (Long) id0,
-                         outputList, controlLocalDeclarationIds, executorService, endOfInclude);
+                         recursiveWriteV2(g, id0,
+                         outputList, controlLocalDeclarationList, executorService, endOfInclude);
                     try{
                         returnList.addAll(n0);
                         remainingThreads++;
@@ -481,12 +516,12 @@ public class ControlFlowAnalysis {
 
                 } else{
                     ArrayList<Object> checked = new ArrayList<>();
-                    for(int i = 0; i < nodeIdList.size(); ++i){
-                        if(!checked.contains(nodeIdList.get(i))){
-                            checked.add(nodeIdList.get(i));
+                    for(int i = 0; i < children.size(); ++i){
+                        Object childId = children.get(i);
+                        if(!checked.contains(childId)){
+                            checked.add(childId);
                             try{
-                                final GraphTraversal<Vertex, Vertex> currentNode = g.asAdmin().clone().outE(Dom.SYN).has(Dom.Syn.E.ORD, i).inV();
-                                ArrayList<String> list = recursiveWriteV2(currentNode, (Long) nodeIdList.get(i), outputList, controlLocalDeclarationIds, executorService, endOfInclude);
+                                ArrayList<String> list = recursiveWriteV2(g, childId, outputList, controlLocalDeclarationList, executorService, endOfInclude);
                                 returnList.addAll(list);
                             }catch(Exception e){
                                 System.out.println("in children");
