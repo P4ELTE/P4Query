@@ -6,11 +6,22 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Launch App",
+            "request": "launch",
+            "mainClass": "p4query.blackboard.App",
+            "projectName": "blackboard"
+        },
+        {
+            "type": "java",
             "name": "Debug (Launch)-App<broker>",
             "request": "launch",
             "mainClass": "p4query.broker.App",
             "projectName": "broker",
-            "args": ["draw", "-A", "ControlFlow"]
+            "args": [
+                "draw",
+                "-A",
+                "ControlFlow"
+            ]
         }
     ]
 }

@@ -52,6 +52,7 @@ import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.util.function.Lambda;
 
+import p4query.CodeGen;
 import p4query.ontology.Dom;
 import p4query.ontology.Status;
 
@@ -109,7 +110,9 @@ public class ControlFlowAnalysis {
             // firstTaskManual(g);
             // writeWithNonRecursive(g);
             
-            getCodeFromGraph(g, true);
+            //getCodeFromGraph(g, true);
+            
+            getCodeFromGraphFJP(g);
 
            //myTries(g);
 
@@ -128,6 +131,27 @@ public class ControlFlowAnalysis {
             long stopTime = System.currentTimeMillis();
             System.out.println(String.format("%s complete. Time used: %s ms.", ControlFlow.class.getSimpleName() , stopTime - startTime));
             return new Status();
+        }
+        private void getCodeFromGraphFJP(GraphTraversalSource g) {
+            
+
+            long start = System.currentTimeMillis();               
+
+            List<Object> possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").id().toList();
+            Object endOfInclude = (possibleEndOfIncludeList.size()>0?(Long) possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1) + 103 : -1);
+            CodeGen codeGen = new CodeGen(g, 0, endOfInclude);
+            ArrayList<String> outputList = new ArrayList<>();
+            outputList.addAll(codeGen.getCode());
+
+            long multiElapsed = System.currentTimeMillis() - start;
+            System.out.println("Elapsed seconds: " + (multiElapsed/1000F) + "sec");  
+
+            System.out.println("Code writing started");
+            try {
+                writeAll("e:/ProgramFiles/Labor/output.p4", outputList);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         private void writeWithNonRecursive(GraphTraversalSource g){   
 
