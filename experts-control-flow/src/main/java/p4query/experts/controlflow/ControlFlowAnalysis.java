@@ -460,20 +460,30 @@ public class ControlFlowAnalysis {
             }
         }
 
+        private static List<Vertex> getNodesToSplitInParallel(GraphTraversalSource g){
+            List<Vertex> list = new ArrayList<>();
+            // list.addAll(g.V().has(Dom.Syn.V.CLASS, "TypeDeclarationContext").toList());
+            // list.addAll(g.V().has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").toList());
+            // list.addAll(g.V().has(Dom.Syn.V.CLASS, "ControlDeclarationContext").toList());
+            list.addAll(g.V().has(Dom.Syn.V.CLASS, "InputContext").toList());
+
+            return list;
+        }
         
         private static void  getCodeFromGraph(GraphTraversalSource g, Boolean cloneMode){     
             remainingThreads = Runtime.getRuntime().availableProcessors();
             ArrayList<String> outputList = new ArrayList<>();     
-            boolean isBasicRun = false;
+            boolean isBasicRun = true;
             if(isBasicRun){ 
                 // //multi-thread
                 long start = System.currentTimeMillis();   
 
                 //System.out.println("Getting control declaration nodes");
                 // List<Vertex> controlLocalDeclarationIds = g.V().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().toList();
-                List<Vertex> nodesToSplitInParallel = g.V().has(Dom.Syn.V.CLASS, "TypeDeclarationContext").toList();
-                nodesToSplitInParallel.addAll(g.V().has(Dom.Syn.V.CLASS, "AssignmentOrMethodCallStatementContext").toList());
-                nodesToSplitInParallel.addAll(g.V().has(Dom.Syn.V.CLASS, "ControlDeclarationContext").toList());
+                List<Vertex> nodesToSplitInParallel = new ArrayList<>();
+
+                nodesToSplitInParallel.addAll(getNodesToSplitInParallel(g));
+                
                 
                 List<Object> possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").id().toList();
 
