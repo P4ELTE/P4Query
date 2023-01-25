@@ -111,7 +111,7 @@ public class ControlFlowAnalysis {
             // firstTaskManual(g);
             // writeWithNonRecursive(g);
             
-            getCodeFromGraph(g, true);
+            //getCodeFromGraph(g, true);
             
             //getCodeFromGraphFJP(g);
             // try {
@@ -1026,7 +1026,8 @@ public class ControlFlowAnalysis {
                 .as("e")
                 .select("c", "e")
                 .toList();
-
+            
+            //System.out.println("addFlowToTwoWayConditionals " + branches.size());
             for (Map<String, Object> m : branches){
                 Vertex c = (Vertex) m.get("c");
                 Edge e = (Edge) m.get("e");
@@ -1119,7 +1120,7 @@ public class ControlFlowAnalysis {
                  .not(__.outE(Dom.SEM)
                         .has(Dom.Sem.ROLE, Dom.Sem.Role.Control.FALSE_BRANCH))
                  .toList();
-
+            //System.out.println("findOneWayCondsAncestsors " + oneWayConds.size());
             for (Vertex c : oneWayConds) {
                 List<Vertex> maybeAncestor = 
                     g.V(c)
@@ -1349,7 +1350,7 @@ public class ControlFlowAnalysis {
                       .fold()).as("cases")
                  .select("sel", "cases")
                  .toList();
-
+        //System.out.println("quickfixSelectInCFG " + sels.size());
         for (Map<String,Object> map : sels) {
             Vertex sel = (Vertex) map.get("sel");
 
