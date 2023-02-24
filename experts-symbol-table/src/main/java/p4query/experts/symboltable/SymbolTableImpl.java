@@ -16,6 +16,7 @@
  */
 package p4query.experts.symboltable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,6 +27,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -55,27 +60,23 @@ public class SymbolTableImpl
     @Singleton
     @SymbolTable
     public Status analyse(GraphTraversalSource g, @SyntaxTree Status s, @AbstractSyntaxTree Status a){
-
         long startTime = System.currentTimeMillis();
         System.out.println(SymbolTable.class.getSimpleName() +" started.");
-
-        resolveNames(g);
-        resolveTypeRefs(g);
-        parserStateScopes(g);
-        localScope(g);
-        parameterAndInstantiationScope(g);
-        fieldAndMethodScope(g);
-        actionRefs(g);
-        actionApps(g);
-        tableApps(g);
-        packageInstantiations(g);
+        resolveNames(g); //52
+        resolveTypeRefs(g); //54
+        parserStateScopes(g); //19
+        localScope(g); //9
+        parameterAndInstantiationScope(g); //123
+        fieldAndMethodScope(g); // 2727 - 75634
+        actionRefs(g); //11
+        actionApps(g); //9
+        tableApps(g); //13
+        packageInstantiations(g); //84 - 33399 - ez sima Gremlines
 //        controlAndParserInstantiations(g);  // TODO delete this
-
-        fixTypedefs(g);
-        fixEnums(g);
-        fixMissingScopes(g);
-        globalScopes(g);
-
+        fixTypedefs(g);//18
+        fixEnums(g); //77
+        fixMissingScopes(g); //61
+        globalScopes(g); //601 - 13585 - nem éri meg
         long stopTime = System.currentTimeMillis();
         System.out.println(String.format("%s complete. Time used: %s ms.", SymbolTable.class.getSimpleName() , stopTime - startTime));
         return new Status();
@@ -429,138 +430,191 @@ public class SymbolTableImpl
                     __.has(Dom.Syn.V.CLASS, "ParserDeclarationContext"))
                 .toList();
         // process the lvalue chains
-        for(Map.Entry<Vertex, Long> lvArity : lvArities.entrySet()){
-            Vertex lv =  lvArity.getKey();
-            Long arity =  lvArity.getValue();
-
-            // collect each element in the chain. reverse the chain. 
-
-            // for lvalues: the first (or the only) element is always "prefixedNonTypeName", the rest are "name"
-            // for expressions, the first is 'nonTypeName'
-            List<Vertex> chainEls = 
-                g.V(lv)
-
-                .emit()
-                .repeat(__.outE(Dom.SYN)
-                            .or(__.has(Dom.Syn.E.RULE, "lvalue"),
-                                __.has(Dom.Syn.E.RULE, "expression"))
-                            .inV())
-                .outE(Dom.SYN).or(__.has(Dom.Syn.E.RULE, "prefixedNonTypeName"), 
-                                  __.has(Dom.Syn.E.RULE, "nonTypeName"), 
-                                  __.has(Dom.Syn.E.RULE, "name"))
-                .inV()
-                .repeat(__.out(Dom.SYN))
-                .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
-                .toList();
-
-            if(chainEls.isEmpty())
-                continue;
-
-            Collections.reverse(chainEls);
-
-            Vertex currentContext = null;
-
-            for(Vertex nameNode : chainEls){
-                String name = (String) g.V(nameNode).values("value").next();
-                
-                // if an element already has a scope, set the current context to the enclosing type of the declaration 
-                // - e.g. in "hdr.ipv4.ttl" the hdr can be scoped by paramater, we need its type to resolve which field scopes ipv4
-                List<Vertex> maybeNextContext =  
-                    g.V(nameNode)
-                    .inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).outV()
-                    .optional(
-                        __.outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE).inV()
-                          .inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).outV())
-                    .toList(); 
-
-                if(!maybeNextContext.isEmpty()){
-
-                    currentContext = maybeNextContext.get(0);
-                    continue;
-                }
-
-                // otherwise, resolve the scope (using the current context or the defaults), add an edge, and set the current context to the type of the declaration
-                // - e.g. to process "ipv4" in "hdr.ipv4.ttl", we will search for the field with a matching name among the fields of whatever type "hdr" was
-                // - e.g. in "mark_to_drop()" there is only one element and it is probably not scoped yet. we have to search for its name among the extern functions.
-
-                // load the current context (struct, extern), or search among global extern functions
-                List<Vertex> scopeCandidates; 
-                if(currentContext != null){
-                    scopeCandidates = new LinkedList<>(); 
-                    scopeCandidates.add(currentContext);
-                } else {
-                    scopeCandidates = new LinkedList<>(globalScopeCandidates);
-                }
-
-
-
-                // find the field and method declaration that declares the name (and has the right arity). add the use into the scope of the declaration.
-
-                if(scopeCandidates.isEmpty()){
-                    // TODO maybe this is too strong
-                    throw new IllegalStateException("Cannot search for the name, because there are no scopes found.");
-                }
-
-                List<Vertex> maybeDeclaration = 
-                    g.V(scopeCandidates)
-                    .repeat(__.out(Dom.SYN))
-                    .until(
-                        __.or(__.has(Dom.Syn.V.CLASS, "StructFieldContext"),
-                              __.has(Dom.Syn.V.CLASS, "FunctionPrototypeContext"),
-                              __.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"))
-                            // match name
-                            .filter(
-                            __.outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME).inV()
-                                .values("value")
-                                .is(P.eq(name)))
-
-                            // match arity
-                            .filter(
-                                __.or(
-                                __.outE(Dom.SYN).has(Dom.Syn.E.RULE, "parameterList").inV()
-                                    .map(__.repeat(__.outE(Dom.SYN)
-                                            .has(Dom.Syn.E.RULE, "nonEmptyParameterList").inV())
-                                            .emit()
-                                            .count()).is(P.eq(arity)),
-                                __.constant(0L).is(P.eq(arity))))).toList();
-
-                if(maybeDeclaration.isEmpty()){
-                // TODO is this silent fail or normal?
-//                    if(!Arrays.asList("isValid", "setValid", "setInvalid").contains(name))
-//                        System.out.println(
-//                            String.format(
-//                                "Warning: no declaration found for name %s at vertex %s",
-//                                name, g.V(nameNode).elementMap().next()));
-                    continue;
-                } 
-
-                if(maybeDeclaration.size() > 1){
-                    System.out.println(
-                        String.format(
-                            "Warning: multiple declaration found for name %s at vertex %s. Declaring nodes: ",
-                            name, 
-                            g.V(nameNode).elementMap().next(), 
-                            g.V(maybeDeclaration).elementMap().toList()));
-                    continue;
-                } 
-
-                Vertex declaration = maybeDeclaration.get(0);
-
-
-                g.V(declaration)
-                  .addE(Dom.SYMBOL).to(nameNode)
-                  .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
-                  .iterate();
-
-                // in case the type of the declaration was found before, make the type declaration the current context.
-                currentContext = 
-                    g.V(declaration)
-                    .optional(
-                        __.outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE).inV()
-                          .inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).outV())
-                    .next();
+        int availableProcessors = Runtime.getRuntime().availableProcessors();
+        
+        int size = lvArities.size();
+        int step = size / availableProcessors;
+        //long start = System.currentTimeMillis();
+        int remaining = size % availableProcessors;
+        ExecutorService executorService = Executors.newFixedThreadPool(availableProcessors);
+        List<Future<?>> futureList = new ArrayList<>();
+        for(int i = 0; i<size; i += step){
+            final int fromInd = i;
+            final int toInd = (fromInd+step) > size ? size-1 : fromInd+step-1+(remaining > 0 ? 1 : 0);
+            // System.out.println(fromInd + "\t" + toInd + "\t" + (toInd-fromInd+1));
+            futureList.add(executorService.submit(() -> loopThroughLvArities(fromInd, toInd, lvArities, globalScopeCandidates, g)));
+            if(remaining > 0){
+                i++;
             }
+            remaining--;            
         }
+        futureList.forEach(future -> {
+            try {
+                future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        });
+        /*
+         long end = System.currentTimeMillis()-start;
+        System.out.println("Multi: " + end + " ms");
+
+        start = System.currentTimeMillis();
+        loopThroughLvArities(0, size, lvArities, globalScopeCandidates, g);
+        end = System.currentTimeMillis()-start;
+        System.out.println("Single: " + end + " ms");
+
+        System.exit(1);
+         */
+        
+        
+
+        
+    }
+
+
+    private static void loopThroughLvArities(int fromInd, int toInd, LinkedHashMap<Vertex, Long> lvArities, List<Vertex> globalScopeCandidates, GraphTraversalSource g) {
+        int ind = 0;
+        for(Map.Entry<Vertex, Long> lvArity : lvArities.entrySet()){
+            if(ind >= fromInd && ind <= toInd){
+                Vertex lv =  lvArity.getKey();
+                Long arity =  lvArity.getValue();
+
+                // collect each element in the chain. reverse the chain. 
+
+                // for lvalues: the first (or the only) element is always "prefixedNonTypeName", the rest are "name"
+                // for expressions, the first is 'nonTypeName'
+                List<Vertex> chainEls = 
+                    g.V(lv)
+
+                    .emit()
+                    .repeat(__.outE(Dom.SYN)
+                                .or(__.has(Dom.Syn.E.RULE, "lvalue"),
+                                    __.has(Dom.Syn.E.RULE, "expression"))
+                                .inV())
+                    .outE(Dom.SYN).or(__.has(Dom.Syn.E.RULE, "prefixedNonTypeName"), 
+                                        __.has(Dom.Syn.E.RULE, "nonTypeName"), 
+                                        __.has(Dom.Syn.E.RULE, "name"))
+                    .inV()
+                    .repeat(__.out(Dom.SYN))
+                    .until(__.has(Dom.Syn.V.CLASS, "TerminalNodeImpl"))
+                    .toList();
+
+                if(chainEls.isEmpty())
+                    continue;
+
+                Collections.reverse(chainEls);
+
+                Vertex currentContext = null;
+
+                for(Vertex nameNode : chainEls){
+                    String name = (String) g.V(nameNode).values("value").next();
+                    
+                    // if an element already has a scope, set the current context to the enclosing type of the declaration 
+                    // - e.g. in "hdr.ipv4.ttl" the hdr can be scoped by paramater, we need its type to resolve which field scopes ipv4
+                    List<Vertex> maybeNextContext =  
+                        g.V(nameNode)
+                        .inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).outV()
+                        .optional(
+                            __.outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE).inV()
+                                .inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).outV())
+                        .toList(); 
+
+                    if(!maybeNextContext.isEmpty()){
+
+                        currentContext = maybeNextContext.get(0);
+                        continue;
+                    }
+
+                    // otherwise, resolve the scope (using the current context or the defaults), add an edge, and set the current context to the type of the declaration
+                    // - e.g. to process "ipv4" in "hdr.ipv4.ttl", we will search for the field with a matching name among the fields of whatever type "hdr" was
+                    // - e.g. in "mark_to_drop()" there is only one element and it is probably not scoped yet. we have to search for its name among the extern functions.
+
+                    // load the current context (struct, extern), or search among global extern functions
+                    List<Vertex> scopeCandidates; 
+                    if(currentContext != null){
+                        scopeCandidates = new LinkedList<>(); 
+                        scopeCandidates.add(currentContext);
+                    } else {
+                        scopeCandidates = new LinkedList<>(globalScopeCandidates);
+                    }
+
+
+
+                    // find the field and method declaration that declares the name (and has the right arity). add the use into the scope of the declaration.
+
+                    if(scopeCandidates.isEmpty()){
+                        // TODO maybe this is too strong
+                        throw new IllegalStateException("Cannot search for the name, because there are no scopes found.");
+                    }
+
+                    List<Vertex> maybeDeclaration = 
+                        g.V(scopeCandidates)
+                        .repeat(__.out(Dom.SYN))
+                        .until(
+                            __.or(__.has(Dom.Syn.V.CLASS, "StructFieldContext"),
+                                    __.has(Dom.Syn.V.CLASS, "FunctionPrototypeContext"),
+                                    __.has(Dom.Syn.V.CLASS, "ControlDeclarationContext"))
+                                // match name
+                                .filter(
+                                __.outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME).inV()
+                                    .values("value")
+                                    .is(P.eq(name)))
+
+                                // match arity
+                                .filter(
+                                    __.or(
+                                    __.outE(Dom.SYN).has(Dom.Syn.E.RULE, "parameterList").inV()
+                                        .map(__.repeat(__.outE(Dom.SYN)
+                                                .has(Dom.Syn.E.RULE, "nonEmptyParameterList").inV())
+                                                .emit()
+                                                .count()).is(P.eq(arity)),
+                                    __.constant(0L).is(P.eq(arity))))).toList();
+
+                    if(maybeDeclaration.isEmpty()){
+                    // TODO is this silent fail or normal?
+    //                    if(!Arrays.asList("isValid", "setValid", "setInvalid").contains(name))
+    //                        System.out.println(
+    //                            String.format(
+    //                                "Warning: no declaration found for name %s at vertex %s",
+    //                                name, g.V(nameNode).elementMap().next()));
+                        continue;
+                    } 
+
+                    if(maybeDeclaration.size() > 1){
+                        System.out.println(
+                            String.format(
+                                "Warning: multiple declaration found for name %s at vertex %s. Declaring nodes: ",
+                                name, 
+                                g.V(nameNode).elementMap().next(), 
+                                g.V(maybeDeclaration).elementMap().toList()));
+                        continue;
+                    } 
+
+                    Vertex declaration = maybeDeclaration.get(0);
+
+
+                    g.V(declaration)
+                        .addE(Dom.SYMBOL).to(nameNode)
+                        .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
+                        .iterate();
+
+                    // in case the type of the declaration was found before, make the type declaration the current context.
+                    currentContext = 
+                        g.V(declaration)
+                        .optional(
+                            __.outE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.HAS_TYPE).inV()
+                                .inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES).outV())
+                        .next();
+                }
+            }else if(ind > toInd){
+                break;
+            }else{
+                continue;
+            }
+            ind++;
+        }
+        
     }
 
 
@@ -1128,18 +1182,17 @@ public class SymbolTableImpl
              .values("value").as("name")
              .select("const", "name")
              .toList();
-
-        for (Map<String,Object> m : names) {
-            Vertex enu = (Vertex) m.get("const");
-            String name = (String) m.get("name");
-
-            g.V().has(Dom.Syn.V.VALUE, name)
+             for (Map<String,Object> m : names) {
+                 Vertex enu = (Vertex) m.get("const");
+                 String name = (String) m.get("name");
+                 
+                 g.V().has(Dom.Syn.V.VALUE, name)
                  .has(Dom.Syn.V.CLASS, "TerminalNodeImpl")
                  .not(__.inE(Dom.SYMBOL).has(Dom.Symbol.ROLE, Dom.Symbol.Role.DECLARES_NAME))
                  .addE(Dom.SYMBOL).from(enu)
                  .property(Dom.Symbol.ROLE, Dom.Symbol.Role.SCOPES)
                  .toList();
-        }
+            }
     }
 
 }
