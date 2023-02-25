@@ -364,7 +364,24 @@ public class ControlFlowAnalysis {
 
 //========================================================================================================================================================
         private static void myTries(GraphTraversalSource gts){
-            List<Object> id = gts.V(0).outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV().id().toList();
+
+            // case 2:
+            //         return "StatOrDeclListContext";
+            //     case 3:
+            //         return "AssignmentOrMethodCallStatementContext";                
+            //     case 4:
+            //         return "DerivedTypeDeclarationContext";                
+            //     case 5:
+            //         return "ControlDeclarationContext";
+            List<Object> idList = gts.V().has(Dom.Syn.V.CLASS, "ParserTypeDeclarationContext").id().toList();
+            idList.forEach(id -> {
+                if(gts.V(id).inE(Dom.SYN).outV().outE(Dom.SYN).has(Dom.Syn.E.ORD, 1).toList().size() > 0){
+                    System.out.println(gts.V(id).values(Dom.Syn.V.NODE_ID).toList());
+                }
+            });
+            // List<Object> list = gts.V().has(Dom.Syn.V.CLASS, "ParserTypeDeclarationContext").inE(Dom.SYN)
+            //     .outV().outE().has(Dom.Syn.E.ORD, 1).inV().values(Dom.Syn.V.NODE_ID).toList();
+            // System.out.println(list);
             //System.out.println(gts.V(6).values(Dom.Syn.V.NODE_ID).toList());
             //System.out.println(gts.V(0).groupCount().by(__.values(Dom.Syn.V.CLASS)).toList());
             //System.out.println("0: " + isSubTreeBigEnough(gts, id.get(0), 5));
@@ -473,17 +490,20 @@ public class ControlFlowAnalysis {
 
                     //System.out.println("Getting control declaration nodes");
                     // List<Vertex> controlLocalDeclarationIds = g.V().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().toList();
-                    List<Object> nodesToSplitInParallel = new ArrayList<>();
+                    List<Object> nodesToSplitInParallel = getNodesToSplitInParallel(g, chosenClass, idBasedSearch);
+                    if(nodesToSplitInParallel.isEmpty()){
+                        System.out.println(getClassNameFromChosenClassNumber(chosenClass) + " skipped");
+                        subMeasures.add(-1F);
+                        continue;
+                    }
 
                     //System.out.println("MULTI " + getClassNameFromChosenClassNumber(chosenClass) + " - Code generation started");
                     if(idBasedSearch){
-                        nodesToSplitInParallel.addAll(getNodesToSplitInParallel(g, chosenClass, idBasedSearch));
                         executorService = Executors.newFixedThreadPool(Math.min(nodesToSplitInParallel.size(), Runtime.getRuntime().availableProcessors()));
                         possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").id().toList();
                         endOfInclude = (Long) possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1) + 103;
                         outputList = recursiveWriteV2(g, 0L, new ArrayList<>(), nodesToSplitInParallel, executorService, endOfInclude);
                     }else{
-                        nodesToSplitInParallel.addAll(getNodesToSplitInParallel(g, chosenClass, idBasedSearch));
                         executorService = Executors.newFixedThreadPool(Math.min(nodesToSplitInParallel.size(), Runtime.getRuntime().availableProcessors()));
                         possibleEndOfIncludeList = g.V().asAdmin().clone().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
                         endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
@@ -505,31 +525,54 @@ public class ControlFlowAnalysis {
         }
 
         private static String getClassNameFromChosenClassNumber(int chosenClass){
+            // switch(chosenClass){
+            //     case 0:
+            //         return "ExpressionListContext";
+            //     case 1:
+            //         return "TypeDeclarationContext";
+            //     case 2:
+            //         return "StatementOrDeclarationContext";
+            //     case 3:
+            //         return "AssignmentOrMethodCallStatementContext";                
+            //     case 4:
+            //         return "DerivedTypeDeclarationContext";                
+            //     case 5:
+            //         return "ControlDeclarationContext";
+            //     default:
+            //         return "ControlDeclarationContext";
+            // }
             switch(chosenClass){
                 case 0:
-                    return "ExpressionListContext";
+                    return "MethodPrototypeContext";
                 case 1:
-                    return "TypeDeclarationContext";
+                    return "ControlLocalDeclarationContext";
                 case 2:
-                    return "StatementOrDeclarationContext";
+                    return "DeclarationContext";
                 case 3:
-                    return "AssignmentOrMethodCallStatementContext";                
+                    return "ParserTypeDeclarationContext";                
                 case 4:
-                    return "DerivedTypeDeclarationContext";                
+                    return "StatementOrDeclarationContext";                
                 case 5:
-                    return "ControlDeclarationContext";
+                    return "ParserStateContext";
                 default:
-                    return "ControlDeclarationContext";
+                    return "ControlLocalDeclarationContext";
             }
         }
 
         private static List<Object> getNodesToSplitInParallel(GraphTraversalSource g, int chosenClass, Boolean idBasedSearch){
             List<Object> list = new ArrayList<>();
-            if(idBasedSearch){
-                list.addAll(g.V().has(Dom.Syn.V.CLASS, getClassNameFromChosenClassNumber(chosenClass)).toList());
-            } else{
-                list.addAll(g.V().has(Dom.Syn.V.CLASS, getClassNameFromChosenClassNumber(chosenClass)).values(Dom.Syn.V.NODE_ID).toList());
-            }
+
+            List<Object> idList = g.V().has(Dom.Syn.V.CLASS, getClassNameFromChosenClassNumber(chosenClass)).id().toList();
+            idList.forEach(id -> {
+                if(g.V(id).inE(Dom.SYN).outV().outE(Dom.SYN).has(Dom.Syn.E.ORD, 1).toList().size() > 0){
+                    if(idBasedSearch){                
+                        list.add(id);
+                    } else{
+                        list.addAll(g.V(id).values(Dom.Syn.V.NODE_ID).toList());
+                    }
+                }
+            });
+            
             return list;
         }
         
@@ -560,13 +603,11 @@ public class ControlFlowAnalysis {
             
             //end try 1
             measures.forEach(subMeasures -> {
-                
-
                 subMeasures.forEach(measure -> {
                     if(!measure.equals(subMeasures.get(subMeasures.size()-1))){
-                        System.out.print(measure + " & ");
+                        System.out.print(measure + "\t&\t");
                     } else{
-                        System.out.println(measure + " \\\\");
+                        System.out.println(measure + "\t\\\\");
                     }
                 });
             });
@@ -651,7 +692,7 @@ public class ControlFlowAnalysis {
                 ArrayList<ArrayList<String>> singleThreads = new ArrayList<>();
                 ArrayList<Boolean> nodesToMultiThread = new ArrayList<>();
                 for(Object o : children){
-                    if(nodesToSplitInParallel.stream().anyMatch(node -> __.id().equals(o)) && remainingThreads > 0){
+                    if(nodesToSplitInParallel.stream().anyMatch(id -> id.equals(o)) && remainingThreads > 0){
                         nodesToMultiThread.add(true);
                         remainingThreads--;               
                         multiThreads.add(executorService.submit(() -> 
