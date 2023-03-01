@@ -55,6 +55,7 @@ import org.apache.tinkerpop.gremlin.util.function.Lambda;
 import org.apache.tinkerpop.shaded.jackson.annotation.JsonTypeInfo.Id;
 
 import p4query.CodeGen;
+import p4query.CodeGenV2;
 import p4query.ontology.Dom;
 import p4query.ontology.Status;
 
@@ -112,9 +113,9 @@ public class ControlFlowAnalysis {
             // firstTaskManual(g);
             // writeWithNonRecursive(g);
             
-            getCodeFromGraph(g, true, true);
+            //getCodeFromGraph(g, true, true);
             
-            //getCodeFromGraphFJP(g);
+            getCodeFromGraphFJP(g, false);
             // try {
 			// 	measureGraph(g);
 			// } catch (IOException e) {
@@ -200,22 +201,26 @@ public class ControlFlowAnalysis {
             return childrenCount + 1;
         }
 
-        private void getCodeFromGraphFJP(GraphTraversalSource g) {
-            int times = 1;
+        private void getCodeFromGraphFJP(GraphTraversalSource g, Boolean idBased) {
             boolean needWrite = true;
             ArrayList<String> outputList = new ArrayList<>();
-            while(times > 0){
-                long start = System.currentTimeMillis();               
+            long start = System.currentTimeMillis();               
 
-                List<Object> possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").id().toList();
-                Object endOfInclude = (possibleEndOfIncludeList.size()>0?(Long) possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1) + 103 : -1);
-                CodeGen codeGen = new CodeGen(g, 0, endOfInclude);
+            List<Object> possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").id().toList();
+            Object endOfInclude = (possibleEndOfIncludeList.size()>0?(Long) possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1) + 103 : -1);
+            if(idBased){
+                CodeGenV2 codeGenV2 = new CodeGenV2(g, 0, endOfInclude);
+                outputList = new ArrayList<>();
+                outputList.addAll(codeGenV2.getCode());
+            } else{
+                Object endOfIncludeNodeId = g.V(endOfInclude).values(Dom.Syn.V.NODE_ID).toList().get(0);
+                CodeGen codeGen = new CodeGen(g, 0, endOfIncludeNodeId);
                 outputList = new ArrayList<>();
                 outputList.addAll(codeGen.getCode());
-                long multiElapsed = System.currentTimeMillis() - start;
-                System.out.println("Elapsed seconds: " + (multiElapsed/1000F) + "sec");  
-                times--;
-            }            
+            }
+            long multiElapsed = System.currentTimeMillis() - start;
+            System.out.println("Elapsed seconds: " + (multiElapsed/1000F) + "sec");  
+
             if(needWrite){
                 System.out.println("Code writing started");
                 try {
