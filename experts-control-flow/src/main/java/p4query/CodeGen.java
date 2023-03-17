@@ -14,19 +14,21 @@ public class CodeGen extends RecursiveTask<List<String>> {
     private GraphTraversalSource graphTraversalSource;
     private Object currentId;
     private Object endOfInclude;
+    private Integer threshold;
 
     
 
-    public CodeGen(GraphTraversalSource graphTraversalSource, Object currentId,Object endOfInclude) {
+    public CodeGen(GraphTraversalSource graphTraversalSource, Object currentId,Object endOfInclude, Integer threshold) {
         this.graphTraversalSource = graphTraversalSource;
         this.currentId = currentId;
         this.endOfInclude = endOfInclude;
+        this.threshold = threshold;
     }
 
     public List<String> getCode(){
         List<String> outputList = new ArrayList<>();       
 
-        CodeGen task = new CodeGen(graphTraversalSource, currentId, endOfInclude);
+        CodeGen task = new CodeGen(graphTraversalSource, currentId, endOfInclude, threshold);
 
         ForkJoinPool fjPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
 	    Future<List<String>> f = fjPool.submit(task);
@@ -44,8 +46,14 @@ public class CodeGen extends RecursiveTask<List<String>> {
     protected List<String> compute() {
         List<String> outputList = new ArrayList<>();
 
-        List<Object> children = graphTraversalSource.V().has(Dom.Syn.V.NODE_ID, currentId).outE(Dom.SYN)
-            .order().by(Dom.Syn.E.ORD).inV().values(Dom.Syn.V.NODE_ID).toList();  
+        List<Object> childrenIds = graphTraversalSource.V().has(Dom.Syn.V.NODE_ID, currentId).outE(Dom.SYN)
+            .order().by(Dom.Syn.E.ORD).inV().id().toList(); 
+
+        List<Object> children = new ArrayList<>(); 
+        for(Object id : childrenIds){
+            children.add(graphTraversalSource.V(id).values(Dom.Syn.V.NODE_ID).toList().get(0));  
+        }
+        
 
         if(children.contains(endOfInclude)){
             children = Arrays.asList(endOfInclude);
@@ -62,8 +70,8 @@ public class CodeGen extends RecursiveTask<List<String>> {
             for(int i = 0; i < children.size(); ++i){
                 Object childId = children.get(i);
                 try{                        
-                    if(isSubTreeBigEnoughNodeID(graphTraversalSource, childId, 5)){
-                        ForkJoinTask<List<String>> task = new CodeGen(graphTraversalSource,childId,endOfInclude).fork();
+                    if(isSubTreeBigEnough(graphTraversalSource, childrenIds.get(i), threshold)){
+                        ForkJoinTask<List<String>> task = new CodeGen(graphTraversalSource,childId,endOfInclude, threshold).fork();
                         taskList.add(task);                            
                     }else{
                         simpleRecursiveList.add(simpleRecursiveGetCodeNodeID(graphTraversalSource, childId));
@@ -139,29 +147,32 @@ public class CodeGen extends RecursiveTask<List<String>> {
 
     private List<String> simpleRecursiveGetCodeNodeID(GraphTraversalSource g, Object cId){
         List<String> outputList = new ArrayList<>();
+        try{
+            List<Object> children = g.V().has(Dom.Syn.V.NODE_ID, cId).outE(Dom.SYN)
+                .order().by(Dom.Syn.E.ORD).inV().values(Dom.Syn.V.NODE_ID).toList();
 
-        List<Object> children = g.V().has(Dom.Syn.V.NODE_ID, cId).outE(Dom.SYN)
-            .order().by(Dom.Syn.E.ORD).inV().values(Dom.Syn.V.NODE_ID).toList();
-
-        if(children.contains(endOfInclude)){
-            children = Arrays.asList(endOfInclude);
-        }
-
-        if(children.size() == 0) {
-            List<Object> classList = g.V().has(Dom.Syn.V.NODE_ID, cId).values(Dom.Syn.V.VALUE).toList();
-            if(classList.size()>0){
-                outputList.add(classList.get(0).toString().replace("\\",""));
+            if(children.contains(endOfInclude)){
+                children = Arrays.asList(endOfInclude);
             }
-        }else{
-            for(int i = 0; i < children.size(); ++i){
-                Object childId = children.get(i);
-                try{                        
-                    outputList.addAll(simpleRecursiveGetCodeNodeID(g, childId));
-                }catch(Exception e){
-                    System.out.println("in children");
-                    e.printStackTrace();
-                }                
+
+            if(children.size() == 0) {
+                List<Object> classList = g.V().has(Dom.Syn.V.NODE_ID, cId).values(Dom.Syn.V.VALUE).toList();
+                if(classList.size()>0){
+                    outputList.add(classList.get(0).toString().replace("\\",""));
+                }
+            }else{
+                for(int i = 0; i < children.size(); ++i){
+                    Object childId = children.get(i);
+                    try{                        
+                        outputList.addAll(simpleRecursiveGetCodeNodeID(g, childId));
+                    }catch(Exception e){
+                        System.out.println("in children");
+                        e.printStackTrace();
+                    }                
+                }
             }
+        } catch(Exception e ){
+            e.printStackTrace();
         }
         return outputList;
     }
@@ -174,7 +185,7 @@ public class CodeGen extends RecursiveTask<List<String>> {
             }else{
                 boolean isBigEnough = false;
                 for (Object i : idList) {                    
-                    isBigEnough = isBigEnough || isSubTreeBigEnough(gts, i, threshold-1);
+                    isBigEnough = isBigEnough || isSubTreeBigEnoughNodeID(gts, i, threshold-1);
                 }
                 return isBigEnough;
             }
@@ -185,9 +196,9 @@ public class CodeGen extends RecursiveTask<List<String>> {
         return false;
     }
 
-    private boolean isSubTreeBigEnough(GraphTraversalSource gts, Object id, int threshold){
-        List<Object> idList = gts.V(id).outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV().id().toList();
+    private boolean isSubTreeBigEnough(GraphTraversalSource gts, Object id, int threshold){        
         try{
+            List<Object> idList = gts.V(id).outE(Dom.SYN).inV().id().toList();
             if(threshold == 1){
                 return true;
             }else{
@@ -197,10 +208,9 @@ public class CodeGen extends RecursiveTask<List<String>> {
                 }
                 return isBigEnough;
             }
-            
         }catch(Exception e){
-            e.printStackTrace();
+            //e.printStackTrace();
+            return false;
         }
-        return false;
     }    
 }

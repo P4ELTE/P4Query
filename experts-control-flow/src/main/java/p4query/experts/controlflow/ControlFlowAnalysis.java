@@ -63,6 +63,8 @@ import org.codejargon.feather.Provides;
 import org.javatuples.Pair;
 
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import p4query.ontology.analyses.AbstractSyntaxTree;
 import p4query.ontology.analyses.ControlFlow;
 import p4query.ontology.analyses.SymbolTable;
@@ -70,7 +72,7 @@ import p4query.ontology.analyses.SyntaxTree;
 
 public class ControlFlowAnalysis {
 
-        private static volatile int remainingThreads;
+        private static AtomicInteger remainingThreads = new AtomicInteger();
     // NOTE: parsers are not structured language elements, we don't add return edges between parser states
     // NOTE: parser control flow is complicated, but it is because of the grammar
     // TODO: test on 1-way conditionals
@@ -113,9 +115,9 @@ public class ControlFlowAnalysis {
             // firstTaskManual(g);
             // writeWithNonRecursive(g);
             
-            //getCodeFromGraph(g, true, true);
+            getCodeFromGraph(g, false, true);
             
-            getCodeFromGraphFJP(g, false);
+            //getCodeFromGraphFJP(g, true);
             // try {
 			// 	measureGraph(g);
 			// } catch (IOException e) {
@@ -209,12 +211,12 @@ public class ControlFlowAnalysis {
             List<Object> possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").id().toList();
             Object endOfInclude = (possibleEndOfIncludeList.size()>0?(Long) possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1) + 103 : -1);
             if(idBased){
-                CodeGenV2 codeGenV2 = new CodeGenV2(g, 0, endOfInclude);
+                CodeGenV2 codeGenV2 = new CodeGenV2(g, 0, endOfInclude, 20);
                 outputList = new ArrayList<>();
                 outputList.addAll(codeGenV2.getCode());
             } else{
                 Object endOfIncludeNodeId = g.V(endOfInclude).values(Dom.Syn.V.NODE_ID).toList().get(0);
-                CodeGen codeGen = new CodeGen(g, 0, endOfIncludeNodeId);
+                CodeGen codeGen = new CodeGen(g, 0, endOfIncludeNodeId, 20);
                 outputList = new ArrayList<>();
                 outputList.addAll(codeGen.getCode());
             }
@@ -460,6 +462,7 @@ public class ControlFlowAnalysis {
             long singleElapsed;
             long multiElapsed;            
             while(n-- > 0){
+                remainingThreads.set(Runtime.getRuntime().availableProcessors());
                 System.out.println(n);
                 ArrayList<Float> subMeasures = new ArrayList<>();
 
@@ -472,7 +475,7 @@ public class ControlFlowAnalysis {
                 }else{
                     possibleEndOfIncludeList = g.V().asAdmin().clone().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
                     endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
-                    outputList = recursiveWriteNoClone(g, 0L, new ArrayList<>(), new ArrayList<>(), null, endOfInclude).getValue0();
+                    outputList = recursiveWriteNoClone(g, 0L, new ArrayList<>(), new ArrayList<>(), null, endOfInclude);
 
                 }
 
@@ -489,30 +492,35 @@ public class ControlFlowAnalysis {
                 //     e.printStackTrace();
                 // }  
 
-                for(int chosenClass = 0; chosenClass<6; ++chosenClass){
+                for(int chosenClass = 0; chosenClass<1; ++chosenClass){
+                //for(int chosenClass = 0; chosenClass<6; ++chosenClass){
                     // //multi-thread
                     start = System.currentTimeMillis();   
-
+                    System.out.println(getClassNameFromChosenClassNumber(chosenClass) + " started");
                     //System.out.println("Getting control declaration nodes");
-                    // List<Vertex> controlLocalDeclarationIds = g.V().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().toList();
-                    List<Object> nodesToSplitInParallel = getNodesToSplitInParallel(g, chosenClass, idBasedSearch);
-                    if(nodesToSplitInParallel.isEmpty()){
-                        System.out.println(getClassNameFromChosenClassNumber(chosenClass) + " skipped");
-                        subMeasures.add(-1F);
-                        continue;
-                    }
+                    
+                    //List<Object> nodesToSplitInParallel = getNodesToSplitInParallel(g, chosenClass, idBasedSearch);
+                    // System.out.println(nodesToSplitInParallel.size());
+                    // if(nodesToSplitInParallel.isEmpty()){
+                    //     System.out.println(getClassNameFromChosenClassNumber(chosenClass) + " skipped");
+                    //     subMeasures.add(-1F);
+                    //     continue;
+                    // }
 
                     //System.out.println("MULTI " + getClassNameFromChosenClassNumber(chosenClass) + " - Code generation started");
                     if(idBasedSearch){
+                        List<Object> nodesToSplitInParallel = g.V().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").inV().id().toList();
                         executorService = Executors.newFixedThreadPool(Math.min(nodesToSplitInParallel.size(), Runtime.getRuntime().availableProcessors()));
                         possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").id().toList();
                         endOfInclude = (Long) possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1) + 103;
                         outputList = recursiveWriteV2(g, 0L, new ArrayList<>(), nodesToSplitInParallel, executorService, endOfInclude);
                     }else{
+                        List<Object> nodesToSplitInParallel = g.V().outE().has(Dom.Syn.E.RULE, "controlLocalDeclaration").outV().values(Dom.Syn.V.NODE_ID).toList();
+                        System.out.println("toSplitSize: " + nodesToSplitInParallel.size() + " Threads: " + Runtime.getRuntime().availableProcessors());
                         executorService = Executors.newFixedThreadPool(Math.min(nodesToSplitInParallel.size(), Runtime.getRuntime().availableProcessors()));
                         possibleEndOfIncludeList = g.V().asAdmin().clone().has(Dom.Syn.V.VALUE, "Deparser").values(Dom.Syn.V.NODE_ID).toList();
                         endOfInclude = (Long)possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1);
-                        outputList = recursiveWriteNoClone(g, 0L, new ArrayList<>(), nodesToSplitInParallel, executorService, endOfInclude).getValue0();
+                        outputList = recursiveWriteCLD(g, 0L, new ArrayList<>(), nodesToSplitInParallel, executorService, endOfInclude);
 
                     }
 
@@ -577,8 +585,19 @@ public class ControlFlowAnalysis {
                     }
                 }
             });
+            int doubleProcessors = Runtime.getRuntime().availableProcessors()*2;
+            if(list.size() < doubleProcessors){
+                return list;
+            }
+            List<Object> trimList = new ArrayList<>();
+            int toKeep = list.size() / doubleProcessors;
+            for(int i = 0; i < list.size(); ++i){
+                if(i % toKeep == 0){
+                    trimList.add(list.get(i));
+                }
+            }
             
-            return list;
+            return trimList;
         }
         
 
@@ -588,7 +607,7 @@ public class ControlFlowAnalysis {
         private static void  getCodeFromGraph(GraphTraversalSource g, Boolean idBasedSearch, Boolean isBasicRun){     
             ArrayList<ArrayList<Float>> measures = new ArrayList<>();
 
-            remainingThreads = Runtime.getRuntime().availableProcessors();
+            
             ArrayList<String> outputList = new ArrayList<>();     
             
 
@@ -606,7 +625,6 @@ public class ControlFlowAnalysis {
                 runGraphToCodeV2(6,outputList, g, measures, idBasedSearch);
             }
             
-            //end try 1
             measures.forEach(subMeasures -> {
                 subMeasures.forEach(measure -> {
                     if(!measure.equals(subMeasures.get(subMeasures.size()-1))){
@@ -619,9 +637,7 @@ public class ControlFlowAnalysis {
             
         }
 
-
-        private static Pair<ArrayList<String>,Integer> recursiveWriteNoClone(GraphTraversalSource graphSource,  Object nodeId, ArrayList<String> outputList, List<Object> controlLocalDeclarationIds, ExecutorService executorService, Long endOfInclude){            
-            Integer count = 1; 
+        private static ArrayList<String> recursiveWriteCLD(GraphTraversalSource graphSource,  Object nodeId, ArrayList<String> outputList, List<Object> controlLocalDeclarationIds, ExecutorService executorService, Long endOfInclude){    
             //System.out.println(nodeId);
             ArrayList<String> returnList = new ArrayList<>();
             GraphTraversal<Vertex, Vertex> currentNode = graphSource.V().has(Dom.Syn.V.NODE_ID, nodeId);
@@ -639,41 +655,101 @@ public class ControlFlowAnalysis {
                     returnList.add(classList.get(0).toString().replace("\\",""));
                 }
             }else{
-                ArrayList<Future<Pair<ArrayList<String>,Integer>>> multiThreads = new ArrayList<>();
-                ArrayList<Pair<ArrayList<String>,Integer>> singleThreads = new ArrayList<>();
+                if(controlLocalDeclarationIds.contains((Object) nodeId) && remainingThreads.get() > 0){
+                    remainingThreads.decrementAndGet();                    
+                    final Object id1 = nodeIdList.get(1);
+                    Future<ArrayList<String>> futureList0 = executorService.submit(() -> 
+                    recursiveWriteCLD(graphSource, (Long) id1,
+                         outputList, controlLocalDeclarationIds, executorService, endOfInclude));
+                         ArrayList<String> pair = 
+                         recursiveWriteCLD(graphSource, (Long) nodeIdList.get(0),
+                         outputList, controlLocalDeclarationIds, executorService, endOfInclude);
+                    try{
+                        returnList.addAll(pair);
+                        remainingThreads.incrementAndGet();
+                        returnList.addAll(futureList0.get());
+                        //System.out.println("NodeId: " + nodeId + " Parallelized: " + futureList0.get().getValue1() + " Singled :" + pair.getValue1());
+                        
+                    }catch(Exception e){
+                        System.out.println("before get");
+                        System.out.println(e.getMessage());
+                    }
+
+                } else{
+                    ArrayList<Object> checked = new ArrayList<>();
+                    for(Object o : nodeIdList){
+                        if(!checked.contains(o)){
+                            checked.add(o);
+                            try{
+                                ArrayList<String> pair = recursiveWriteCLD(graphSource, (Long) o, outputList, controlLocalDeclarationIds, executorService, endOfInclude);
+                                returnList.addAll(pair);
+                            }catch(Exception e){
+                                System.out.println("in children");
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+            }
+            return returnList;
+        }
+
+
+        private static ArrayList<String> recursiveWriteNoClone(GraphTraversalSource graphSource,  Object nodeId, ArrayList<String> outputList, List<Object> nodesToSplitInParallel, ExecutorService executorService, Long endOfInclude){    
+            //System.out.println(nodeId);
+            ArrayList<String> returnList = new ArrayList<>();
+            GraphTraversal<Vertex, Vertex> currentNode = graphSource.V().has(Dom.Syn.V.NODE_ID, nodeId);
+            List<Object> nodeIdList = currentNode.asAdmin().clone().outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV()
+            .values(Dom.Syn.V.NODE_ID).toList()
+            ;  
+            //List<Object> neededList = nodeIdList.stream().filter(e -> (Long)e > (endOfInclude + 22)).collect(Collectors.toList());
+            //Both needed
+            if(nodeIdList.contains(endOfInclude+16)){
+                nodeIdList = Arrays.asList(endOfInclude+16);
+            }
+            if(nodeIdList.size() == 0){// && nodeId > endOfInclude){
+                List<Object> classList = currentNode.values(Dom.Syn.V.VALUE).toList();
+                if(classList.size()>0){
+                    returnList.add(classList.get(0).toString().replace("\\",""));
+                }
+            }else{
+                ArrayList<Future<ArrayList<String>>> multiThreads = new ArrayList<>();
+                ArrayList<ArrayList<String>> singleThreads = new ArrayList<>();
                 ArrayList<Boolean> nodesToMultiThread = new ArrayList<>();
+                        
                 for(Object o : nodeIdList){
-                    if(controlLocalDeclarationIds.contains(o) && remainingThreads > 0){
+                    if(nodesToSplitInParallel.contains(o) && remainingThreads.get() > 0){
+                        //System.out.println("multi " + o + " at " + (new Date()));
                         nodesToMultiThread.add(true);
-                        remainingThreads--;               
+                        remainingThreads.decrementAndGet();               
                         multiThreads.add(executorService.submit(() -> 
                             recursiveWriteNoClone(graphSource, (Long) o,
-                             outputList, controlLocalDeclarationIds, executorService, endOfInclude)));   
+                            outputList, nodesToSplitInParallel, executorService, endOfInclude)));   
                     } else{
+                        //System.out.println("single " + o + " at " + (new Date()));
                         nodesToMultiThread.add(false);
                         singleThreads.add(recursiveWriteNoClone(graphSource, (Long) o, 
-                            outputList, controlLocalDeclarationIds, executorService, endOfInclude));
-                    }        
+                            outputList, nodesToSplitInParallel, executorService, endOfInclude));
+                    }   
                 }
                 int multiCount = 0;
                 int singleCount = 0;
                 for (Boolean isMulti : nodesToMultiThread) {
                     if(isMulti){
                         try {
-                            Future<Pair<ArrayList<String>, Integer>> futureList = multiThreads.get(multiCount++);
-                            returnList.addAll(futureList.get().getValue0());
-                            count += futureList.get().getValue1();
+                            Future<ArrayList<String>> futureList = multiThreads.get(multiCount++);
+                            returnList.addAll(futureList.get());    
+                            remainingThreads.incrementAndGet();
                         } catch (InterruptedException | ExecutionException e) {
                             e.printStackTrace();
                         }
                     } else{
-                        Pair<ArrayList<String>, Integer> pair = singleThreads.get(singleCount++);
-                        returnList.addAll(pair.getValue0());
-                        count += pair.getValue1();
+                        ArrayList<String> list = singleThreads.get(singleCount++);
+                        returnList.addAll(list);
                     }
-                }                        
+                } 
             }
-            return new Pair<ArrayList<String>,Integer>(returnList, count);
+            return returnList;
         }
 
 
@@ -697,9 +773,10 @@ public class ControlFlowAnalysis {
                 ArrayList<ArrayList<String>> singleThreads = new ArrayList<>();
                 ArrayList<Boolean> nodesToMultiThread = new ArrayList<>();
                 for(Object o : children){
-                    if(nodesToSplitInParallel.stream().anyMatch(id -> id.equals(o)) && remainingThreads > 0){
+                    if(nodesToSplitInParallel.stream().anyMatch(id -> id.equals(o)) && remainingThreads.get() > 0){
+                        //System.out.println("hey");
                         nodesToMultiThread.add(true);
-                        remainingThreads--;               
+                        remainingThreads.decrementAndGet();               
                         multiThreads.add(executorService.submit(() -> 
                         recursiveWriteV2(g, o, outputList, nodesToSplitInParallel, executorService, endOfInclude)));
                     } else{
@@ -714,6 +791,7 @@ public class ControlFlowAnalysis {
                         try {
                             Future<ArrayList<String>> futureList = multiThreads.get(multiCount++);
                             returnList.addAll(futureList.get());
+                            remainingThreads.incrementAndGet();
                         } catch (InterruptedException | ExecutionException e) {
                             e.printStackTrace();
                         }
@@ -750,8 +828,8 @@ public class ControlFlowAnalysis {
                     returnList.add(classList.get(0).toString().replace("\\",""));
                 }
             }else{
-                if(controlLocalDeclarationIds.contains((Object) nodeId) && remainingThreads > 0){
-                    remainingThreads--;                    
+                if(controlLocalDeclarationIds.contains((Object) nodeId) && remainingThreads.get() > 0){
+                    remainingThreads.decrementAndGet();                    
                     final Object id0 = nodeIdList.get(0);
                     final Object id1 = nodeIdList.get(1);
                     final GraphTraversal<Vertex, Vertex> id0Node = g.repeat(__.outE(Dom.SYN).inV()).until(__.has(Dom.Syn.V.NODE_ID, id0));
@@ -764,7 +842,7 @@ public class ControlFlowAnalysis {
                          outputList, controlLocalDeclarationIds, executorService, endOfInclude);
                     try{
                         returnList.addAll(pair.getValue0());
-                        remainingThreads++;
+                        remainingThreads.incrementAndGet();
                         returnList.addAll(futureList0.get().getValue0());
                         //System.out.println("NodeId: " + nodeId + " Parallelized: " + futureList0.get().getValue1() + " Singled :" + pair.getValue1());
                         count += futureList0.get().getValue1() + pair.getValue1();
