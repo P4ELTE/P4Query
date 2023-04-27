@@ -115,9 +115,9 @@ public class ControlFlowAnalysis {
             // firstTaskManual(g);
             // writeWithNonRecursive(g);
             
-            getCodeFromGraph(g, false, false, true);
+            //getCodeFromGraph(g, true, false, true);
             
-            //getCodeFromGraphFJP(g, true);
+            getCodeFromGraphFJP(g, false,1);
             // try {
 			// 	measureGraph(g);
 			// } catch (IOException e) {
@@ -127,16 +127,16 @@ public class ControlFlowAnalysis {
 
            //myTries(g);
 
-            addFlowToFirstStatement(g);
-            addFlowToTwoWayConditionals(g);
-            addFalseFlowToOneWayConditionals(g);
-            addFlowBetweenSiblings(g);
-            addFlowBetweenParserStates(g);
-            addParserEntry(g);
-            addParserExit(g);
-            addEntryExit(g);
+            // addFlowToFirstStatement(g);
+            // addFlowToTwoWayConditionals(g);
+            // addFalseFlowToOneWayConditionals(g);
+            // addFlowBetweenSiblings(g);
+            // addFlowBetweenParserStates(g);
+            // addParserEntry(g);
+            // addParserExit(g);
+            // addEntryExit(g);
 
-            quickfixSelectInCFG(g);
+            // quickfixSelectInCFG(g);
 
             System.exit(1);
             long stopTime = System.currentTimeMillis();
@@ -153,12 +153,13 @@ public class ControlFlowAnalysis {
             // );
             // List<Object> childrenIdList = gts.V(id).outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV().values(Dom.Syn.V.NODE_ID).toList();
             measures.addAll(getClassChildMeasures(gts, id));
-
+            System.out.println("Measure done");
             measures.sort((a,b) -> a.getValue1() - b.getValue1());
             measures.sort((a,b) -> a.getValue0().toString().compareTo(b.getValue0().toString()));
+            System.out.println("Sort done");
 
             
-            BufferedWriter writer = new BufferedWriter(new FileWriter("e:/ProgramFiles/Labor/measures.txt"));
+            BufferedWriter writer = new BufferedWriter(new FileWriter("e:/ProgramFiles/Labor/measures_8.txt"));
             measures.forEach(measure -> {
                 try {
                     writer.write(measure.getValue0().toString() + ": " + measure.getValue1().toString() + "\n");
@@ -203,26 +204,30 @@ public class ControlFlowAnalysis {
             return childrenCount + 1;
         }
 
-        private void getCodeFromGraphFJP(GraphTraversalSource g, Boolean idBased) {
+        private void getCodeFromGraphFJP(GraphTraversalSource g, Boolean idBased, int n) {
             boolean needWrite = true;
+            int threshold = 20;
             ArrayList<String> outputList = new ArrayList<>();
             long start = System.currentTimeMillis();               
 
             List<Object> possibleEndOfIncludeList = g.V().has(Dom.Syn.V.VALUE, "Deparser").id().toList();
             Object endOfInclude = (possibleEndOfIncludeList.size()>0?(Long) possibleEndOfIncludeList.get(possibleEndOfIncludeList.size() - 1) + 103 : -1);
-            if(idBased){
-                CodeGenV2 codeGenV2 = new CodeGenV2(g, 0, endOfInclude, 20);
-                outputList = new ArrayList<>();
-                outputList.addAll(codeGenV2.getCode());
-            } else{
-                Object endOfIncludeNodeId = g.V(endOfInclude).values(Dom.Syn.V.NODE_ID).toList().get(0);
-                CodeGen codeGen = new CodeGen(g, 0, endOfIncludeNodeId, 20);
-                outputList = new ArrayList<>();
-                outputList.addAll(codeGen.getCode());
+            for(int i = 0; i < n; ++i){
+                start = System.currentTimeMillis();   
+                if(idBased){
+                    CodeGenV2 codeGenV2 = new CodeGenV2(g, 0, endOfInclude, threshold);
+                    outputList = new ArrayList<>();
+                    outputList.addAll(codeGenV2.getCode());
+                } else{
+                    Object endOfIncludeNodeId = g.V(endOfInclude).values(Dom.Syn.V.NODE_ID).toList().get(0);
+                    CodeGen codeGen = new CodeGen(g, 0, endOfIncludeNodeId, threshold);
+                    outputList = new ArrayList<>();
+                    outputList.addAll(codeGen.getCode());
+                }
+                long multiElapsed = System.currentTimeMillis() - start;
+                //System.out.println("Elapsed seconds: " + (multiElapsed/1000F) + "sec");  
+                System.out.println((multiElapsed/1000F));  
             }
-            long multiElapsed = System.currentTimeMillis() - start;
-            System.out.println("Elapsed seconds: " + (multiElapsed/1000F) + "sec");  
-
             if(needWrite){
                 System.out.println("Code writing started");
                 try {
@@ -279,7 +284,7 @@ public class ControlFlowAnalysis {
                     toWrite.append(currentChar + "\n");
                 }
                 boolean isCurly = toWrite.toString().contains("{");
-                toWrite.insert(0, (isCurly || currentChar.equals("}")) ? new String(new char[tabsNeeded-1]).replace("\0", "\t")
+                toWrite.insert(0, (isCurly || currentChar.equals("}")) ? new String(new char[(tabsNeeded > 0 ? tabsNeeded-1 : 0)]).replace("\0", "\t")
                             : new String(new char[tabsNeeded]).replace("\0", "\t"));
                 if(currentChar.startsWith("{")){
                     tabsNeeded++;
@@ -371,27 +376,19 @@ public class ControlFlowAnalysis {
 
 //========================================================================================================================================================
         private static void myTries(GraphTraversalSource gts){
-
-            // case 2:
-            //         return "StatOrDeclListContext";
-            //     case 3:
-            //         return "AssignmentOrMethodCallStatementContext";                
-            //     case 4:
-            //         return "DerivedTypeDeclarationContext";                
-            //     case 5:
-            //         return "ControlDeclarationContext";
-            List<Object> idList = gts.V().has(Dom.Syn.V.CLASS, "ParserTypeDeclarationContext").id().toList();
-            idList.forEach(id -> {
-                if(gts.V(id).inE(Dom.SYN).outV().outE(Dom.SYN).has(Dom.Syn.E.ORD, 1).toList().size() > 0){
-                    System.out.println(gts.V(id).values(Dom.Syn.V.NODE_ID).toList());
+            Object node = gts.V().has(Dom.Syn.V.NODE_ID, 1815).id().toList().get(0);
+            //System.out.println(gts.V().has(Dom.Syn.V.NODE_ID, 1808).values(Dom.Syn.V.CLASS).toList().get(0));
+            try{
+                if(gts.V().has(Dom.Syn.V.NODE_ID, 1818).outE(Dom.SYN).order().by(Dom.Syn.E.ORD).inV().toList().size() > 0){
+                    System.out.println("more");
+                }else{
+                    System.out.println("empty");
                 }
-            });
-            // List<Object> list = gts.V().has(Dom.Syn.V.CLASS, "ParserTypeDeclarationContext").inE(Dom.SYN)
-            //     .outV().outE().has(Dom.Syn.E.ORD, 1).inV().values(Dom.Syn.V.NODE_ID).toList();
-            // System.out.println(list);
-            //System.out.println(gts.V(6).values(Dom.Syn.V.NODE_ID).toList());
-            //System.out.println(gts.V(0).groupCount().by(__.values(Dom.Syn.V.CLASS)).toList());
-            //System.out.println("0: " + isSubTreeBigEnough(gts, id.get(0), 5));
+                
+            } catch(Exception e){
+                System.out.println("caught");
+                e.printStackTrace();
+            }
         }
 
         private static int mySubTry(GraphTraversalSource gts, Object id){
