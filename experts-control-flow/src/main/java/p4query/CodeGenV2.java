@@ -1,21 +1,18 @@
 package p4query;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.*;
 
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
 import p4query.ontology.Dom;
 
 public class CodeGenV2 extends RecursiveTask<List<String>> {
 
-    private GraphTraversalSource graphTraversalSource;
+    private final GraphTraversalSource graphTraversalSource;
     private Object currentId;
-    private Object endOfInclude;
-    private Integer threshold;
+    private final Object endOfInclude;
+    private final Integer threshold;
 
     
 
@@ -36,7 +33,7 @@ public class CodeGenV2 extends RecursiveTask<List<String>> {
         try{
 			outputList.addAll(f.get());
 		}catch(Exception e){
-			System.out.println(e.getMessage());
+			e.printStackTrace();
 		}
 		fjPool.shutdown();
 		return outputList;
@@ -73,8 +70,6 @@ public class CodeGenV2 extends RecursiveTask<List<String>> {
                                 taskList.add(null);
                             }
                         }catch(Throwable t){
-                            System.out.println("compute - in children");
-                            // t.printstackTrace();
                             simpleRecursiveList.add(new ArrayList<String>());
                             taskList.add(null);
                         }
@@ -87,8 +82,7 @@ public class CodeGenV2 extends RecursiveTask<List<String>> {
                                 outputList.addAll(simpleRecursiveList.remove(0));
                             }
                         } catch (Throwable t) {
-                            System.out.println("compute - taskList foreach");
-                            // t.printstackTrace();
+                            t.printStackTrace();
                         }
                     });
                 }
@@ -99,7 +93,6 @@ public class CodeGenV2 extends RecursiveTask<List<String>> {
                 }
             }
         }catch(Throwable t){
-            t.printStackTrace();
             return outputList;
         }
 
@@ -127,7 +120,6 @@ public class CodeGenV2 extends RecursiveTask<List<String>> {
                         try{                        
                             outputList.addAll(simpleRecursiveGetCode(g, childId));
                         }catch(Throwable t){
-                            System.out.println("simpleRecursiveGetCode - add outputs");
                             t.printStackTrace();
                         }
                     }
@@ -140,8 +132,6 @@ public class CodeGenV2 extends RecursiveTask<List<String>> {
                 }
             }
         }catch(Throwable t){
-            //System.out.println("simpleRecursiveGetCode - outer in children");
-            t.printStackTrace();
             return outputList;
         }
 
@@ -162,7 +152,6 @@ public class CodeGenV2 extends RecursiveTask<List<String>> {
             }
             
         }catch(Throwable t){
-            // t.printstackTrace();
             return false;
         }
     }

@@ -434,7 +434,7 @@ public class SymbolTableImpl
         
         int size = lvArities.size();
         int step = size / availableProcessors;
-        //long start = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         int remaining = size % availableProcessors;
         ExecutorService executorService = Executors.newFixedThreadPool(availableProcessors);
         List<Future<?>> futureList = new ArrayList<>();
@@ -455,17 +455,17 @@ public class SymbolTableImpl
                 e.printStackTrace();
             }
         });
-        /*
+        
          long end = System.currentTimeMillis()-start;
-        System.out.println("Multi: " + end + " ms");
+        // System.out.println("Multi: " + end + " ms");
 
-        start = System.currentTimeMillis();
-        loopThroughLvArities(0, size, lvArities, globalScopeCandidates, g);
-        end = System.currentTimeMillis()-start;
-        System.out.println("Single: " + end + " ms");
+        // start = System.currentTimeMillis();
+        // loopThroughLvArities(0, size, lvArities, globalScopeCandidates, g);
+        // end = System.currentTimeMillis()-start;
+        // System.out.println("Single: " + end + " ms");
 
-        System.exit(1);
-         */
+        // System.exit(1);
+         
         
         
 

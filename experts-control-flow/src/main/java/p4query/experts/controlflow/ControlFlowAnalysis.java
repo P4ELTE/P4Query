@@ -115,9 +115,9 @@ public class ControlFlowAnalysis {
             // firstTaskManual(g);
             // writeWithNonRecursive(g);
             
-            //getCodeFromGraph(g, true, false, true);
+            getCodeFromGraph(g, true, false, true);
             
-            getCodeFromGraphFJP(g, false,1);
+            //getCodeFromGraphFJP(g, true,1);
             // try {
 			// 	measureGraph(g);
 			// } catch (IOException e) {
@@ -127,18 +127,18 @@ public class ControlFlowAnalysis {
 
            //myTries(g);
 
-            // addFlowToFirstStatement(g);
-            // addFlowToTwoWayConditionals(g);
-            // addFalseFlowToOneWayConditionals(g);
-            // addFlowBetweenSiblings(g);
-            // addFlowBetweenParserStates(g);
-            // addParserEntry(g);
-            // addParserExit(g);
-            // addEntryExit(g);
+            addFlowToFirstStatement(g);
+            addFlowToTwoWayConditionals(g);
+            addFalseFlowToOneWayConditionals(g);
+            addFlowBetweenSiblings(g);
+            addFlowBetweenParserStates(g);
+            addParserEntry(g);
+            addParserExit(g);
+            addEntryExit(g);
 
-            // quickfixSelectInCFG(g);
+            quickfixSelectInCFG(g);
 
-            System.exit(1);
+           
             long stopTime = System.currentTimeMillis();
             System.out.println(String.format("%s complete. Time used: %s ms.", ControlFlow.class.getSimpleName() , stopTime - startTime));
             return new Status();
