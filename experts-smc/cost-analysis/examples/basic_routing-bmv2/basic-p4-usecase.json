@@ -1,0 +1,47 @@
+{                                                               
+"tableContents" :                                             
+    [ { "tableName" : "rewrite_mac",                         
+        "entries" : [] },
+      { "tableName" : "ipv4_fib",                         
+        "entries" : [{ "actionName" : "fib_hit_nexthop",      
+                         "patterns" : [0, 0] }] } , 
+      { "tableName" : "bd",                         
+        "entries" : [{ "actionName" : "set_vrf",      
+                         "patterns" : [1] }] } , 
+      { "tableName" : "nexthop",                         
+        "entries" : [{ "actionName" : "set_egress_details",      
+                         "patterns" : [1] }] } , 
+      { "tableName" : "port_mapping",                         
+        "entries" : [{ "actionName" : "set_bd",      
+                         "patterns" : [1] }] } , 
+      { "tableName" : "ipv4_fib_lpm",                         
+        "entries" : [{ "actionName" : "fib_hit_nexthop",      
+                         "patterns" : [1, 1] }] } ] ,         
+
+"packetDistribution" :                                        
+   [ { "prob" : "165/500" ,                                     
+       "packet" :                                             
+           [ { "headerName" : "ethernet" } ] } ,
+
+    { "prob" : "165/500" ,                                     
+       "packet" :                                             
+           [ { "headerName" : "ethernet",
+               "schema"   : [ { "fieldName" : "src", "size" : 48 },
+                              { "fieldName" : "dst", "size" : 48 }, 
+                              { "fieldName" : "etherType", "size" : 16 } ],
+               "data"   : [ { "fieldName" : "src", "value" : 0 } ,
+                            { "fieldName" : "dst", "value" : 0 } ,
+                            { "fieldName" : "etherType", "value" : 2048 } ] } ,
+             { "headerName" : "ipv4" } ] } ,
+
+    { "prob" : "170/500" ,                                     
+       "packet" :                                             
+           [ { "headerName" : "ethernet",
+               "data"   : [ { "fieldName" : "etherType", 
+                              "value" : 2048 } ] } ,
+             { "headerName" : "ipv4",
+               "data"   : [ { "fieldName" : "dstAddr", 
+                              "value" : 4294967295 } ] } ] }
+   ]         
+}                                                               
+

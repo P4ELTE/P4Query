@@ -1,0 +1,7 @@
+rewards "op"
+
+  op = I_READ     : 1; 
+  op = I_WRITE     : 1; 
+
+endrewards
+

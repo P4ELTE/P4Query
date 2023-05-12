@@ -1,0 +1,71 @@
+
+// smc program data
+
+const int eip__port_mapping = 21 ; 
+const int eip__bd = 26 ; 
+const int eip__ipv4_fib = 31 ; 
+const int eip__ipv4_fib_lpm = 40 ;
+const int eip__nexthop = 45 ; 
+
+// benchmark data
+
+const double best__overhead = 0.086 ;
+const double avg__overhead = 0.283854 ;
+const double worst__overhead = 0.432 ;
+
+const int size__t1 = 87382 ;
+
+const double best__t1  = 1.745 ;  
+const double avg__t1  = 4.2151722 ;  
+const double worst__t1  = 5.765 ;  
+
+const double best__t1entry = best__t1/size__t1; 
+const double avg__t1entry = avg__t1/size__t1; 
+const double worst__t1entry = worst__t1/size__t1; 
+
+// p4 program data
+
+const int size__port_mapping = 29128 ;
+const int size__bd = 65536 ;
+const int size__ipv4_fib = 0;
+const int size__ipv4_fib_lpm = 53621 ;
+const int size__nexthop = 32768 ;
+
+// rewards
+
+rewards "best_case"
+
+  op = NO_OP & eip = 0 : best__overhead; 
+
+  op = OP_INVOKE & eip = eip__port_mapping : (best__t1entry * size__port_mapping);  
+  op = OP_INVOKE & eip = eip__bd : (best__t1entry * size__bd);  
+  op = OP_INVOKE & eip = eip__ipv4_fib : (best__t1entry * size__ipv4_fib);  
+  op = OP_INVOKE & eip = eip__ipv4_fib_lpm : (best__t1entry * size__ipv4_fib_lpm);  
+  op = OP_INVOKE & eip = eip__nexthop : (best__t1entry * size__nexthop);  
+
+endrewards
+
+
+rewards "worst_case"
+
+  op = NO_OP & eip = 0 : worst__overhead; 
+
+  op = OP_INVOKE & eip = eip__port_mapping : (worst__t1entry * size__port_mapping);  
+  op = OP_INVOKE & eip = eip__bd : (worst__t1entry * size__bd);  
+  op = OP_INVOKE & eip = eip__ipv4_fib : (worst__t1entry * size__ipv4_fib);  
+  op = OP_INVOKE & eip = eip__ipv4_fib_lpm : (worst__t1entry * size__ipv4_fib_lpm);  
+  op = OP_INVOKE & eip = eip__nexthop : (worst__t1entry * size__nexthop);  
+
+endrewards
+
+rewards "avg_case"
+
+  op = NO_OP & eip = 0 : avg__overhead; 
+
+  op = OP_INVOKE & eip = eip__port_mapping : (avg__t1entry * size__port_mapping);  
+  op = OP_INVOKE & eip = eip__bd : (avg__t1entry * size__bd);  
+  op = OP_INVOKE & eip = eip__ipv4_fib : (avg__t1entry * size__ipv4_fib);  
+  op = OP_INVOKE & eip = eip__ipv4_fib_lpm : (avg__t1entry * size__ipv4_fib_lpm);  
+  op = OP_INVOKE & eip = eip__nexthop : (avg__t1entry * size__nexthop);  
+
+endrewards

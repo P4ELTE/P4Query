@@ -1,0 +1,19 @@
+[] (eip=0 & op=NO_OP) ->
+  (s0' = 1) &
+  (s1' = 2) &
+  (s2' = 3) &
+  (s3' = 4) &
+  (esp' = 3) &
+  (op' = END_OP);
+
+[] (eip=1 & op=NO_OP) ->
+  (op' = OP_ADD);
+
+[] (eip=2 & op=NO_OP) ->
+  (op' = OP_ADD);
+
+[] (eip=3 & op=NO_OP) ->
+  (op' = OP_ADD);
+
+[] (eip=4 & op=NO_OP) ->
+  (op' = DONE);
