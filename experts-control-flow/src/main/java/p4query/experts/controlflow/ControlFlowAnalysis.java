@@ -126,7 +126,7 @@ public class ControlFlowAnalysis {
 			// }
 
            //myTries(g);
-
+            System.exit(1);
             addFlowToFirstStatement(g);
             addFlowToTwoWayConditionals(g);
             addFalseFlowToOneWayConditionals(g);
@@ -204,6 +204,14 @@ public class ControlFlowAnalysis {
             return childrenCount + 1;
         }
 
+        // Ezen metódus végzi a ForkJoinPool-os futást. Itt meg lehet adni, hogy szükséges-e a fájlba írás a futás után (futásidők nézésénél ki lehet kapcsolni).
+        // g - a generált gráf, amit bejárok
+        // idBased - nodeId vagy id alapú futás
+        // n - hányszor fusson le az elemzés
+        // Meg lehet adni a threshold-ot, ami azt adja meg, mekkora részfának kell lennie, hogy fork-oljunk még rá.
+        // Az outputList-ben lesz a végeredmény. 
+        // Az alap include-ok levágását ezen konstans megoldással oldottam meg (endOfInclude).
+        // Az IdBased paraméter alapján eldönti, hogy a CodeGen vagy CodeGenV2 alapján dolgozzon, végül összeszedi az outputList-be az eredményt, majd ha kell, kiírja fájlba.
         private void getCodeFromGraphFJP(GraphTraversalSource g, Boolean idBased, int n) {
             boolean needWrite = true;
             int threshold = 20;
@@ -261,6 +269,7 @@ public class ControlFlowAnalysis {
         
         }
 
+        // A fájlba írás és a kód alakjának visszanyerése található itt.
         public static void writeAll(String filename, ArrayList<String> code) 
         throws IOException {
             BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
@@ -301,6 +310,8 @@ public class ControlFlowAnalysis {
             }
             writer.close();
         }
+
+        // A writeAll metódus segédfüggvénye, ami megadja, hogy milyen módon adja hozzá a következő tagot az output listához.
         private static String getCurrent(int i, ArrayList<String> code, String currentChar) {
             String ret = "";
             if(i+1 < code.size()){
@@ -451,7 +462,13 @@ public class ControlFlowAnalysis {
         // }
 
 
-        // Mode 0 - id based search, 1 - nodeId based search, 2 - CLD
+        // n - hányszor fusson az elemzés
+        // outputList - kimenet
+        // g - a generált gráf, amit bejárok
+        // measures - itt tároltam a mért eredmények idejét
+        // isIdBased - nodeId vagy id alapú bejárás
+        // isCLD - speciális ControlLocalDeclarationContext alapú futás-e
+        // A paraméterként kapott n-szer lefut az elemzés, első körben egy szálon, majd több szálon. A tényleges számolás a recursiveWrite függvényekben található.
         private static ArrayList<String> runGraphToCodeV2(Integer n, ArrayList<String> outputList, GraphTraversalSource g, ArrayList<ArrayList<Float>> measures, Boolean isIdBased, Boolean isCLD){
             long start;
             List<Object> possibleEndOfIncludeList;
@@ -549,23 +566,10 @@ public class ControlFlowAnalysis {
             return outputList;
         }
 
+
+        // Segédfüggvény, ami megadja a kapott szám alapján, hogy melyik osztály alapján történik a vágás.
         private static String getClassNameFromChosenClassNumber(int chosenClass){
-            // switch(chosenClass){
-            //     case 0:
-            //         return "ExpressionListContext";
-            //     case 1:
-            //         return "TypeDeclarationContext";
-            //     case 2:
-            //         return "StatementOrDeclarationContext";
-            //     case 3:
-            //         return "AssignmentOrMethodCallStatementContext";                
-            //     case 4:
-            //         return "DerivedTypeDeclarationContext";                
-            //     case 5:
-            //         return "ControlDeclarationContext";
-            //     default:
-            //         return "ControlDeclarationContext";
-            // }
+            
             switch(chosenClass){
                 case 0:
                     return "MethodPrototypeContext";
@@ -584,6 +588,10 @@ public class ControlFlowAnalysis {
             }
         }
 
+
+        // Segédfüggvény, ami megadja, hogy mely csúcsok mentén kell majd több szálra bontani a futást. 
+        // Ha CLD, akkor egyértelmű az osztály, ha nem az, akkor pedig a getClassNameFromChosenClassNumber segédfüggvény által kapja meg ezt.
+        // Végül ha túl sok ilyen csúcs állna rendelkezésünkre, akkor egy trim műveletet hajt végre. Végeredményként a csúcsok listájával tér vissza.
         private static List<Object> getNodesToSplitInParallel(GraphTraversalSource g, int chosenClass, Boolean isIdBased, Boolean isCLD){
             List<Object> list = new ArrayList<>();
 
@@ -621,9 +629,7 @@ public class ControlFlowAnalysis {
         }
         
 
-        /*
-         * @param  idBasedSearch false -> nodeId alapú keresés; true -> id alapú (hash) keresés
-         */
+        // A mérési eredmények kimutatásaiban segített az, hogy ezen metódust hívom kívülről. Itt be lehetett állítani a módot, futások számát, stb. Végül a mérési eredményeket LaTeX-be könnyen illeszthető formátumban kiírta a konzolra.
         private static void  getCodeFromGraph(GraphTraversalSource g, Boolean isIdBased, Boolean isBasicRun, Boolean isCLD){     
             ArrayList<ArrayList<Float>> measures = new ArrayList<>();
 
@@ -657,6 +663,10 @@ public class ControlFlowAnalysis {
             
         }
 
+
+        // Rekurzív metódus, ami a gráfot bejárja az id alapján és a speciális ControlLocalDeclarationContext alapú folyamatot alkalmazza a kód visszanyeréséhez.
+        // Működése röviden: az adott csúcsnak összeszedi a gyerekeit, ha nincs, akkor levélben tartózkodunk, kell a value tag, 
+        // ha nem, akkor a gyerekeire egyesével meghívjuk a bejáró függvényt rekurzív módon. Ha kell, akkor több szálra bontva, majd az eredményeket kellő sorrendben összefűzzük és ezzel tér vissza.
         private static ArrayList<String> recursiveWriteCLDV2(GraphTraversalSource graphSource,  Object nodeId, ArrayList<String> outputList, List<Object> controlLocalDeclarationIds, ExecutorService executorService, Long endOfInclude){    
             //System.out.println(nodeId);
             ArrayList<String> returnList = new ArrayList<>();
@@ -709,6 +719,9 @@ public class ControlFlowAnalysis {
             return returnList;
         }
 
+        // Rekurzív metódus, ami a gráfot bejárja a nodeId alapján és a speciális ControlLocalDeclarationContext alapú folyamatot alkalmazza a kód visszanyeréséhez.
+        // Működése röviden: az adott csúcsnak összeszedi a gyerekeit, ha nincs, akkor levélben tartózkodunk, kell a value tag, 
+        //ha nem, akkor a gyerekeire egyesével meghívjuk a bejáró függvényt rekurzív módon. Ha kell, akkor több szálra bontva, majd az eredményeket kellő sorrendben összefűzzük és ezzel tér vissza.
         private static ArrayList<String> recursiveWriteCLD(GraphTraversalSource graphSource,  Object nodeId, ArrayList<String> outputList, List<Object> controlLocalDeclarationIds, ExecutorService executorService, Long endOfInclude){    
             //System.out.println(nodeId);
             ArrayList<String> returnList = new ArrayList<>();
@@ -766,7 +779,9 @@ public class ControlFlowAnalysis {
             return returnList;
         }
 
-
+        // Rekurzív metódus, ami a gráfot bejárja a nodeId alapján és ha az aktuálisan vizsgált gyerek csúcs éppen egy vágási csomópont, akkor erre alkalmazza a több szálra bontást.
+        // Működése röviden: az adott csúcsnak összeszedi a gyerekeit, ha nincs, akkor levélben tartózkodunk, kell a value tag, 
+        //ha nem, akkor a gyerekeire egyesével meghívjuk a bejáró függvényt rekurzív módon. Ha kell, akkor több szálra bontva, majd az eredményeket kellő sorrendben összefűzzük és ezzel tér vissza.
         private static ArrayList<String> recursiveWriteV1(GraphTraversalSource graphSource,  Object nodeId, ArrayList<String> outputList, List<Object> nodesToSplitInParallel, ExecutorService executorService, Long endOfInclude){    
             //System.out.println(nodeId);
             ArrayList<String> returnList = new ArrayList<>();
@@ -825,6 +840,9 @@ public class ControlFlowAnalysis {
         }
 
 
+        // Rekurzív metódus, ami a gráfot bejárja az id alapján és ha az aktuálisan vizsgált gyerek csúcs éppen egy vágási csomópont, akkor erre alkalmazza a több szálra bontást.
+        // Működése röviden: az adott csúcsnak összeszedi a gyerekeit, ha nincs, akkor levélben tartózkodunk, kell a value tag, 
+        //ha nem, akkor a gyerekeire egyesével meghívjuk a bejáró függvényt rekurzív módon. Ha kell, akkor több szálra bontva, majd az eredményeket kellő sorrendben összefűzzük és ezzel tér vissza.
         private static ArrayList<String> recursiveWriteV2(GraphTraversalSource g, Object nodeId, ArrayList<String> outputList, List<Object> nodesToSplitInParallel, ExecutorService executorService, Object endOfInclude){  
             ArrayList<String> returnList = new ArrayList<>();
 

@@ -8,6 +8,8 @@ import java.util.concurrent.*;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import p4query.ontology.Dom;
 
+// A CodeGen osztály a nodeId alapú bejárást alkalmazza költségesebb folyamatok bemutatására.
+// RecursiveTask-ból származik, mivel a compute-nak van visszatérési értéke (nem void).
 public class CodeGen extends RecursiveTask<List<String>> {
 
     private final GraphTraversalSource graphTraversalSource;
@@ -24,6 +26,7 @@ public class CodeGen extends RecursiveTask<List<String>> {
         this.threshold = threshold;
     }
 
+    // Ezt a metódust hívom meg kívülről, ezzel kezdem a bejárást. Itt létrehozza a taskot, amit submit-elek, végül összeszedi az outputList-be az eredményt.
     public List<String> getCode(){
         List<String> outputList = new ArrayList<>();       
 
@@ -41,6 +44,11 @@ public class CodeGen extends RecursiveTask<List<String>> {
         
     }
 
+    // Ha még van gyereke az adott csúcsnak (ahol tart), akkor végigiterál a gyerekein. 
+    // Amennyiben az isSubTreeBigEnough segédfüggvény szerint elég nagy a részfa, akkor fork-olni kell ezen gyerek részfájának bejárására. 
+    // Ha nem, akkor egy szálon történik a maradék részfa számolása. 
+	// Ezek eredményei rendre a taskList és simpleRecursiveList listában vannak annyi csavarral, hogy ha egy szálon lesz a futás, 
+    // akkor a taskList-be null kerül, ezzel jelezve a listák összefűzésénél, hogy itt a következő lista a simpleRecursiveList-ből kerüljön be.
     @Override
     protected List<String> compute() {
         List<String> outputList = new ArrayList<>();
@@ -106,6 +114,7 @@ public class CodeGen extends RecursiveTask<List<String>> {
         return outputList;
     }
 
+    // Az egyszálú rekurzív gráfbejárás itt megy végbe. Hasonló elveket használ, mint a recursiveWriteV1
     private List<String> simpleRecursiveGetCodeNodeID(GraphTraversalSource g, Object cId){
         List<String> outputList = new ArrayList<>();
         try{
@@ -157,6 +166,7 @@ public class CodeGen extends RecursiveTask<List<String>> {
         return outputList;
     }
 
+    // Segédfüggvény, ami vizsgálja, hogy az adott gyökerű részfa elég nagy-e ahhoz, hogy fork-oljunk rá.
     private boolean isSubTreeBigEnough(GraphTraversalSource gts, Object id, int threshold){        
         try{
             List<Object> idList = gts.V(id).outE(Dom.SYN).inV().id().toList();
